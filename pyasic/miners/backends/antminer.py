@@ -115,6 +115,22 @@ class AntminerModern(BMMiner):
     supports_shutdown = True
     supports_power_modes = True
 
+    async def get_hashrate(self) -> AlgoHashRateType | None:
+        data = await self.web.summary()
+        if data:
+            try:
+                hashrate = data["SUMMARY"][0]["rate_5s"]
+                return self.algo.hashrate(
+                    rate=float(hashrate),
+                    unit=self.algo.unit.GH,
+                ).into(
+                    self.algo.unit.default
+                )
+            except (LookupError, ValueError, TypeError):
+                pass
+        return None
+
+
     async def get_config(self) -> MinerConfig:
         data = await self.web.get_miner_conf()
         if data:
