@@ -30,6 +30,7 @@ import httpx
 from pyasic import settings
 from pyasic.logger import logger
 from pyasic.miners.antminer import *
+from pyasic.miners.antminer.mskminer import *
 from pyasic.miners.auradine import *
 from pyasic.miners.avalonminer import *
 from pyasic.miners.backends import *
@@ -642,6 +643,9 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
     MinerTypes.MSKMINER: {
         None: MSKMiner,
         "S19-88": MSKMinerS19NoPIC,
+        "S19J-PRO": MSKMinerS19JPro,
+        "S19J-PRO+": MSKMinerS19JProPlus,
+        "S19I": MSKMinerS19i
     },
     MinerTypes.LUX_OS: {
         None: LUXMiner,
@@ -781,7 +785,6 @@ class MinerFactory:
             else:
                 if miner_type is not None:
                     break
-
         if miner_type is not None:
             miner_model: str | None = None
             miner_model_fns = {
@@ -803,6 +806,7 @@ class MinerFactory:
                 MinerTypes.HAMMER: self.get_miner_model_hammer,
                 MinerTypes.VOLCMINER: self.get_miner_model_volcminer,
                 MinerTypes.ELPHAPEX: self.get_miner_model_elphapex,
+                MinerTypes.MSKMINER: self.get_miner_model_mskminer
             }
             version: str | None = None
             miner_version_fns = {
@@ -933,7 +937,8 @@ class MinerFactory:
             return MinerTypes.INNOSILICON
         if "Miner UI" in web_text:
             return MinerTypes.AURADINE
-        return None
+        #TODO Проверка для msk
+        return MinerTypes.ANTMINER
 
     async def _get_miner_socket(self, ip: str) -> MinerTypes | None:
         commands = ["version", "devdetails"]
@@ -1012,7 +1017,7 @@ class MinerFactory:
             return MinerTypes.HIVEON
         if "KAONSU" in upper_data:
             return MinerTypes.MARATHON
-        if "RWGLR" in upper_data:
+        if ("RWGLR" in upper_data) or ("INFO_APP" in upper_data):
             return MinerTypes.MSKMINER
         if "ANTMINER" in upper_data and "DEVDETAILS" not in upper_data:
             return MinerTypes.ANTMINER
@@ -1204,7 +1209,6 @@ class MinerFactory:
             asyncio.create_task(self._get_model_antminer_web(ip)),
             asyncio.create_task(self._get_model_antminer_sock(ip)),
         ]
-
         return await concurrent_get_first_result(tasks, lambda x: x is not None)
 
     async def _get_model_antminer_web(self, ip: str) -> str | None:
@@ -1215,7 +1219,6 @@ class MinerFactory:
         web_json_data = await self.send_web_command(
             ip, "/cgi-bin/get_system_info.cgi", auth=auth
         )
-
         if web_json_data is not None:
             try:
                 miner_model = web_json_data["minertype"]
@@ -1577,10 +1580,10 @@ class MinerFactory:
         return None
 
     async def get_miner_model_mskminer(self, ip: str) -> str | None:
-        sock_json_data = await self.send_api_command(ip, "version")
+        sock_json_data = await self.send_api_command(ip, "info_app")
         if sock_json_data is not None:
             try:
-                return sock_json_data["VERSION"][0]["Type"].split(" ")[0]
+                return sock_json_data["miner_type"]
             except LookupError:
                 pass
         return None

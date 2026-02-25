@@ -17,8 +17,18 @@
 from pyasic.miners.backends.mskminer import MSKMiner
 from pyasic.miners.device.models import (
     S19NoPIC,
+    S19jPro,
+    S19i,
+    S19jProPlus
 )
-
+class MSKMinerS19JPro(MSKMiner, S19jPro):
+    pass
 
 class MSKMinerS19NoPIC(MSKMiner, S19NoPIC):
+    pass
+
+class MSKMinerS19i(MSKMiner, S19i):
+    pass
+
+class MSKMinerS19JProPlus(MSKMiner, S19jProPlus):
     pass

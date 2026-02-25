@@ -73,11 +73,10 @@ class MSKMiner(BMMiner):
                 rpc_stats = await self.rpc.stats()
             except APIError:
                 pass
-
         if rpc_stats is not None:
             try:
                 return self.algo.hashrate(
-                    rate=float(rpc_stats["STATS"][0]["total_rate"]),
+                    rate=float(rpc_stats["STATS"][1]["GHS 5s"]),
                     unit=self.algo.unit.GH,  # type: ignore[attr-defined]
                 ).into(
                     self.algo.unit.default  # type: ignore[attr-defined]

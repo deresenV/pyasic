@@ -14,4 +14,4 @@
 #  limitations under the License.                                              -
 # ------------------------------------------------------------------------------
 
-from .S19 import MSKMinerS19NoPIC
+from .S19 import *
