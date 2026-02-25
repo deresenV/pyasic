@@ -88,6 +88,20 @@ class ElphapexMiner(StockFirmware):
     web: ElphapexWebAPI
 
     data_locations = ELPHAPEX_DATA_LOC
+    async def get_hashrate(self) -> AlgoHashRateType | None:
+        data = await self.web.stats()
+        if data:
+            try:
+                hashrate = data["STATS"][0]["rate_5s"]
+                return self.algo.hashrate(
+                    rate=float(hashrate),
+                    unit=self.algo.unit.MH,
+                ).into(
+                    self.algo.unit.default
+                )
+            except (LookupError, ValueError, TypeError):
+                pass
+        return None
 
     async def get_config(self) -> MinerConfig:
         data = await self.web.get_miner_conf()
