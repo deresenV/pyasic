@@ -41,6 +41,7 @@ from .M61 import (
     BTMinerM61VK20,
     BTMinerM61VK30,
     BTMinerM61VK40,
+    BTMinerM61VK70,
     BTMinerM61VL10,
     BTMinerM61VL30,
     BTMinerM61VL40,

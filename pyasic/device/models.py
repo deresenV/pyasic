@@ -384,6 +384,7 @@ class WhatsminerModels(MinerModelType):
     M61VK20 = "M61 VK20"
     M61VK30 = "M61 VK30"
     M61VK40 = "M61 VK40"
+    M61VK70 = "M61 VK70"
     M61VL10 = "M61 VL10"
     M61VL30 = "M61 VL30"
     M61VL40 = "M61 VL40"

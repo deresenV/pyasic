@@ -1,5 +1,5 @@
 from pyasic.miners.backends import M6X
-from pyasic.miners.device.models import M61VK10
+from pyasic.miners.device.models import M61VK10, M61VK70
 
 
 class BTMinerM61VK10(M6X, M61VK10):
@@ -24,6 +24,9 @@ from pyasic.miners.device.models import M61VK40
 
 
 class BTMinerM61VK40(M6X, M61VK40):
+    pass
+
+class BTMinerM61VK70(M6X, M61VK70):
     pass
 
 

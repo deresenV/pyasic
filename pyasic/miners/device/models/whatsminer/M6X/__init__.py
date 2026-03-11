@@ -41,11 +41,13 @@ from .M61 import (
     M61VK20,
     M61VK30,
     M61VK40,
+    M61VK70,
     M61VL10,
     M61VL30,
     M61VL40,
     M61VL50,
     M61VL60,
+
 )
 from .M61S import M61SVL10, M61SVL20, M61SVL30
 from .M61S_Plus import M61SPlusVL30

@@ -449,6 +449,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "M61VK20": BTMinerM61VK20,
         "M61VK30": BTMinerM61VK30,
         "M61VK40": BTMinerM61VK40,
+        "M61VK70": BTMinerM61VK70,
         "M61VL10": BTMinerM61VL10,
         "M61VL30": BTMinerM61VL30,
         "M61VL40": BTMinerM61VL40,
@@ -909,6 +910,8 @@ class MinerFactory:
             "www-authenticate", ""
         ):
             return MinerTypes.ELPHAPEX
+        if "/cgi-bin/luci" in web_text:
+            return MinerTypes.WHATSMINER
         if len(web_resp.history) > 0:
             history_resp = web_resp.history[0]
             if (
@@ -974,10 +977,10 @@ class MinerFactory:
             await writer.drain()
 
             # loop to receive all the data
-            timeouts_remaining = max(1, int(settings.get("factory_get_timeout", 3)))
+            timeouts_remaining = max(3, int(settings.get("factory_get_timeout", 3)))
             while True:
                 try:
-                    d = await asyncio.wait_for(reader.read(4096), timeout=1)
+                    d = await asyncio.wait_for(reader.read(4096), timeout=2)
                     if not d:
                         break
                     data += d
@@ -1110,7 +1113,7 @@ class MinerFactory:
     async def send_btminer_v3_api_command(self, ip, command):
         try:
             reader, writer = await asyncio.open_connection(ip, 4433)
-        except (ConnectionError, OSError):
+        except (ConnectionError, OSError) as e:
             return None
         cmd = {"cmd": command}
 
@@ -1130,11 +1133,11 @@ class MinerFactory:
 
             writer.close()
             await writer.wait_closed()
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as e:
             writer.close()
             await writer.wait_closed()
             return None
-        except (ConnectionError, OSError):
+        except (ConnectionError, OSError) as e:
             return None
         if data == b"Socket connect failed: Connection refused\n":
             return None
@@ -1285,11 +1288,88 @@ class MinerFactory:
             try:
                 miner_model = sock_json_data_v3["msg"]["miner"]["type"].replace("_", "")
                 miner_model = miner_model[:-1] + "0"
-
                 return miner_model
             except (TypeError, LookupError):
                 pass
-        return None
+        #todo fix
+        # login_url = f"https://{ip}/cgi-bin/luci/"
+        # api_url = f"https://{ip}/cgi-bin/luci/admin/status/overview"
+        #
+
+        # try:
+        #     async with session.post(
+        #             login_url,
+        #             data=login_data,
+        #             allow_redirects=True,
+        #             timeout=ClientTimeout(total=5)
+        #     ) as login_resp:
+        #         print(login_resp)
+        #
+        #     async with session.get(
+        #             api_url,
+        #             json={},
+        #             timeout=ClientTimeout(total=2)
+        #     ) as api_resp:
+        #         try:
+        #             result = await api_resp.json()
+        #             if api_resp.status == 200:
+        #                 print(f"{ip}: {result}")
+        #         except Exception as e:
+        #             print(e)
+        # except:
+        #     pass
+        #
+        #
+        # import asyncio
+        # import aiohttp
+        # from aiohttp import ClientTimeout
+        # async with aiohttp.ClientSession() as session:
+        #     login_url = f"https://{ip}/cgi-bin/luci/"
+        #     api_url = f"https://{ip}/cgi-bin/luci/admin/status/overview"
+        #
+        #     login_data = {
+        #         'luci_username': 'admin',
+        #         'luci_password': 'admin'
+        #     }
+        #     headers = {
+        #         'Referer': login_url,
+        #         'User-Agent': 'Mozilla/5.0 (Android)'
+        #     }
+        #
+        #     try:
+        #         # 1. Попытка входа
+        #         async with session.post(
+        #                 login_url,
+        #                 data=login_data,
+        #                 headers=headers,
+        #                 allow_redirects=True,
+        #                 timeout=ClientTimeout(total=5),
+        #                 ssl=False
+        #         ) as login_resp:
+        #             # Если после редиректа мы не в админке — авторизация не прошла
+        #             # print(123)
+        #             # if "/admin/" not in str(login_resp.url):
+        #             #     print(1234)
+        #             #     return None
+        #             print(login_resp.status)
+        #
+        #
+        #         # 2. Получение данных
+        #         async with session.get(
+        #                 api_url,
+        #                 timeout=ClientTimeout(total=5),
+        #                 ssl=False
+        #         ) as api_resp:
+        #             print(99)
+        #             print(api_resp.status)
+        #             if api_resp.status == 200:
+        #                 print(api_resp)
+        #                 raw_data = await api_resp.json()
+        #                 # Передаем полученные данные в ваш метод фильтрации
+        #                 return await self.miner_data(raw_data, filters, ip)
+        #     except Exception:
+        #         return None
+        #     return None
 
     async def get_miner_version_whatsminer(self, ip: str) -> str | None:
         sock_json_data = await self.send_api_command(ip, "get_version")

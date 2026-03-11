@@ -85,6 +85,26 @@ class MSKMiner(BMMiner):
                 pass
         return None
 
+    async def blink(self, command: str) -> bool:
+        try:
+            answer = await self.web.send_command(command)
+            if answer:
+                return answer['ok']
+        except:
+            pass
+        return False
+
+
+    async def fault_light_on(self) -> bool:
+        return await self.blink("blink/start")
+
+
+    async def fault_light_off(self) -> bool:
+        """All miners return False if command success"""
+        if await self.blink("blink/stop"):
+            return False
+        return True
+
     async def _get_wattage(self, rpc_stats: dict | None = None) -> int | None:
         if rpc_stats is None:
             try:

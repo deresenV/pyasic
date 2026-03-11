@@ -32,12 +32,18 @@ class M61VK30(WhatsMinerMake):
 
 class M61VK40(WhatsMinerMake):
     raw_model = MinerModel.WHATSMINER.M61VK40
-
     expected_chips = 192
     expected_fans = 2
     expected_hashboards = 3
     algo = MinerAlgo.SHA256
 
+class M61VK70(WhatsMinerMake):
+     raw_model = MinerModel.WHATSMINER.M61VK70
+
+     expected_chips = 192
+     expected_fans = 2
+     expected_hashboards = 3
+     algo = MinerAlgo.SHA256
 
 class M61VL10(WhatsMinerMake):
     raw_model = MinerModel.WHATSMINER.M61VL10

@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and         -
 #  limitations under the License.                                              -
 # ------------------------------------------------------------------------------
-
+import asyncio
 import logging
 from pathlib import Path
 
@@ -142,15 +142,6 @@ class AntminerModern(BMMiner):
     ) -> None:
         self.config = config
         await self.web.set_miner_conf(config.as_am_modern(user_suffix=user_suffix))
-        # if data:
-        #     if data.get("code") == "M000":
-        #         return
-        #
-        # for i in range(7):
-        #     data = await self.get_config()
-        #     if data == self.config:
-        #         break
-        #     await asyncio.sleep(1)
 
     async def upgrade_firmware(
         self,
@@ -225,7 +216,9 @@ class AntminerModern(BMMiner):
         return self.light or False
 
     async def reboot(self) -> bool:
+        # print(await asyncio.gather(*[self.web.reboot() for i in range(5)]))
         data = await self.web.reboot()
+        # print(data)
         if data:
             return True
         return False
