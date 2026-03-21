@@ -1211,12 +1211,19 @@ class MinerFactory:
                 return MINER_CLASSES[miner_type][None](ip, version)
             return cast(AnyMiner, UnknownMiner(str(ip), version))
 
+    async def pitbit_miner_formatter(self, model: str):
+        if "_i" in model[-2:]:
+            return model[:-2]
+        else:
+            return model
+
     async def get_miner_model_antminer(self, ip: str) -> str | None:
         tasks = [
             asyncio.create_task(self._get_model_antminer_web(ip)),
             asyncio.create_task(self._get_model_antminer_sock(ip)),
         ]
-        return await concurrent_get_first_result(tasks, lambda x: x is not None)
+        result = await concurrent_get_first_result(tasks, lambda x: x is not None)
+        return await self.pitbit_miner_formatter(result)
 
     async def _get_model_antminer_web(self, ip: str) -> str | None:
         # last resort, this is slow
