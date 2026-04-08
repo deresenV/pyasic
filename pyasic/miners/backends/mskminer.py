@@ -95,6 +95,15 @@ class MSKMiner(BMMiner):
         return False
 
 
+    async def reboot(self) -> bool:
+        answer = None
+        try:
+            answer = await self.web.send_command("reboot")
+            return True
+        except:
+            pass
+        return False
+
     async def fault_light_on(self) -> bool:
         return await self.blink("blink/start")
 

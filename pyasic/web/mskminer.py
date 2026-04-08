@@ -29,8 +29,11 @@ from pyasic.web.base import BaseWebAPI
 class MSKMinerWebAPI(BaseWebAPI):
     def __init__(self, ip: str) -> None:
         super().__init__(ip)
-        self.username = "admin"
-        self.pwd = settings.get("default_mskminer_web_password", "root")
+        self.username = "root"
+        #todo
+        # self.pwd = settings.get("default_mskminer_web_password", "root")
+        self.pwd = "root"
+
 
     async def multicommand(
         self, *commands: str, ignore_errors: bool = False, allow_warning: bool = True

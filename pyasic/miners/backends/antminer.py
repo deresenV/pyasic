@@ -130,6 +130,23 @@ class AntminerModern(BMMiner):
                 pass
         return None
 
+    async def get_hashboards(self) -> list[HashBoard]:
+        answer = []
+        try:
+            data = await self.web.send_command('stats')
+            chains = data['STATS'][0]['chain']
+            for chain in chains:
+                answer.append(HashBoard(
+                    slot = chain['index'],
+                    inlet_temp=min(chain['temp_pic']),
+                    outlet_temp=max(chain['temp_pcb']),
+                    chip_temp=max(chain['temp_chip']),
+                    chips=chain['asic_num']
+                ))
+
+        except:
+            pass
+        return answer
 
     async def get_config(self) -> MinerConfig:
         data = await self.web.get_miner_conf()
@@ -216,9 +233,7 @@ class AntminerModern(BMMiner):
         return self.light or False
 
     async def reboot(self) -> bool:
-        # print(await asyncio.gather(*[self.web.reboot() for i in range(5)]))
         data = await self.web.reboot()
-        # print(data)
         if data:
             return True
         return False
