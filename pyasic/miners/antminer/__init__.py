@@ -23,3 +23,4 @@ from .luxos import *
 from .marathon import *
 from .mskminer import *
 from .vnish import *
+from .pitbit import *

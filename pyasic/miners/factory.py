@@ -34,6 +34,7 @@ from pyasic.miners.antminer.mskminer import *
 from pyasic.miners.auradine import *
 from pyasic.miners.avalonminer import *
 from pyasic.miners.backends import *
+from pyasic.miners.backends.pitbit import PitBitMiner
 from pyasic.miners.base import AnyMiner
 from pyasic.miners.bitaxe import *
 from pyasic.miners.blockminer import *
@@ -70,6 +71,7 @@ class MinerTypes(enum.Enum):
     LUCKYMINER = 16
     ELPHAPEX = 17
     MSKMINER = 18
+    PITBIT = 19
 
 
 MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
@@ -84,7 +86,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER KS5": BMMinerKS5,
         "ANTMINER KS5 PRO": BMMinerKS5Pro,
         "ANTMINER L7": BMMinerL7,
-        "ANTMINER L7_I": BMMinerL7,
+        "ANTMINER L7_I": PitBitMinerL7,
         "ANTMINER K7": BMMinerK7,
         "ANTMINER D7": BMMinerD7,
         "ANTMINER E9 PRO": BMMinerE9Pro,
@@ -94,7 +96,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER S9J": BMMinerS9j,
         "ANTMINER T9": BMMinerT9,
         "ANTMINER L9": BMMinerL9,
-        "ANTMINER L9_I": BMMinerL9,
+        "ANTMINER L9_I": PitBitMinerL9,
         "ANTMINER Z15": CGMinerZ15,
         "ANTMINER Z15 PRO": BMMinerZ15Pro,
         "ANTMINER S17": BMMinerS17,
@@ -105,7 +107,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER T17+": BMMinerT17Plus,
         "ANTMINER T17E": BMMinerT17e,
         "ANTMINER S19": BMMinerS19,
-        "ANTMINER S19_I": BMMinerS19,
+        "ANTMINER S19_I": PitBitMinerS19,
         "ANTMINER S19L": BMMinerS19L,
         "ANTMINER S19 PRO": BMMinerS19Pro,
         "ANTMINER S19J": BMMinerS19j,
@@ -118,16 +120,16 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER S19J PRO+": BMMinerS19jProPlus,
         "BHB42XXXX": BMMinerS19jProPlus,
         "ANTMINER S19 XP": BMMinerS19XP,
-        "ANTMINER S19 XP_I": BMMinerS19XP,
+        "ANTMINER S19 XP_I": PitBitMinerS19XP,
         "ANTMINER S19A": BMMinerS19a,
         "ANTMINER S19A PRO": BMMinerS19aPro,
         "ANTMINER S19 HYDRO": BMMinerS19Hydro,
         "ANTMINER S19 PRO HYD.": BMMinerS19ProHydro,
         "ANTMINER S19 PRO+ HYD.": BMMinerS19ProPlusHydro,
         "ANTMINER S19K PRO": BMMinerS19KPro,
-        "ANTMINER S19K PRO_I": BMMinerS19KPro,
+        "ANTMINER S19K PRO_I": PitBitMinerS19KPro,
         "ANTMINER S19J XP": BMMinerS19jXP,
-        "ANTMINER S19J XP_I": BMMinerS19jXP,
+        "ANTMINER S19J XP_I": PitBitMinerS19JXP,
         "ANTMINER T19": BMMinerT19,
         "ANTMINER S21": BMMinerS21,
         "ANTMINER BHB68601": BMMinerS21,  # ???
@@ -1223,7 +1225,7 @@ class MinerFactory:
             asyncio.create_task(self._get_model_antminer_sock(ip)),
         ]
         result = await concurrent_get_first_result(tasks, lambda x: x is not None)
-        return await self.pitbit_miner_formatter(result)
+        return result
 
     async def _get_model_antminer_web(self, ip: str) -> str | None:
         # last resort, this is slow
@@ -1246,7 +1248,6 @@ class MinerFactory:
         if sock_json_data is not None:
             try:
                 miner_model = sock_json_data["VERSION"][0]["Type"]
-
                 if " (" in miner_model:
                     split_miner_model = miner_model.split(" (")
                     miner_model = split_miner_model[0]
