@@ -92,7 +92,7 @@ class PitBitMiner(AntminerModern):
         return True
 
     async def stop_mining(self) -> bool:
-       return await self._change_mining_mode(1)
+        return await self._change_mining_mode(1)
 
     async def resume_mining(self) -> bool:
         return await self._change_mining_mode(0)

@@ -107,6 +107,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER T17+": BMMinerT17Plus,
         "ANTMINER T17E": BMMinerT17e,
         "ANTMINER S19": BMMinerS19,
+        "ANTMINER LOADING_I": PitBitMinerS19,
         "ANTMINER S19_I": PitBitMinerS19,
         "ANTMINER S19L": BMMinerS19L,
         "ANTMINER S19 PRO": BMMinerS19Pro,
@@ -116,6 +117,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER S19J88NOPIC": BMMinerS19jNoPIC,
         "ANTMINER S19PRO+": BMMinerS19ProPlus,
         "ANTMINER S19J PRO": BMMinerS19jPro,
+        "ANTMINER S19J PRO_I": PitBitMinerS19jPro,
         "ANTMINER S19J+": BMMinerS19jPlus,
         "ANTMINER S19J PRO+": BMMinerS19jProPlus,
         "BHB42XXXX": BMMinerS19jProPlus,
@@ -1059,7 +1061,7 @@ class MinerFactory:
                     auth=auth,
                     timeout=settings.get("factory_get_timeout", 3),
                 )
-            except (httpx.HTTPError, asyncio.TimeoutError):
+            except (httpx.HTTPError, asyncio.TimeoutError) as e:
                 logger.info(f"{ip}: Web command timeout.")
                 return None
         if data is None:
@@ -1078,7 +1080,7 @@ class MinerFactory:
         data = b""
         try:
             reader, writer = await asyncio.open_connection(ip, 4028)
-        except (ConnectionError, OSError):
+        except (ConnectionError, OSError) as e:
             return None
         cmd = {"command": command}
 
@@ -1221,10 +1223,14 @@ class MinerFactory:
 
     async def get_miner_model_antminer(self, ip: str) -> str | None:
         tasks = [
-            asyncio.create_task(self._get_model_antminer_web(ip)),
             asyncio.create_task(self._get_model_antminer_sock(ip)),
         ]
         result = await concurrent_get_first_result(tasks, lambda x: x is not None)
+        if not result:
+            tasks = [
+                asyncio.create_task(self._get_model_antminer_web(ip)),
+            ]
+            result = await concurrent_get_first_result(tasks, lambda x: x is not None)
         return result
 
     async def _get_model_antminer_web(self, ip: str) -> str | None:
@@ -1251,7 +1257,6 @@ class MinerFactory:
                 if " (" in miner_model:
                     split_miner_model = miner_model.split(" (")
                     miner_model = split_miner_model[0]
-
                 return miner_model
             except (TypeError, LookupError):
                 pass
