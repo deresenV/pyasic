@@ -21,7 +21,7 @@ from typing import Any
 
 import httpx
 
-from pyasic import settings
+from pyasic import settings, MinerConfig
 from pyasic.errors import APIError
 from pyasic.web.base import BaseWebAPI
 
@@ -30,8 +30,6 @@ class MSKMinerWebAPI(BaseWebAPI):
     def __init__(self, ip: str) -> None:
         super().__init__(ip)
         self.username = "root"
-        #todo
-        # self.pwd = settings.get("default_mskminer_web_password", "root")
         self.pwd = "root"
 
 
@@ -60,6 +58,7 @@ class MSKMinerWebAPI(BaseWebAPI):
             except httpx.HTTPError:
                 warnings.warn(f"Could not authenticate with miner web: {self}")
             try:
+                print(parameters)
                 resp = await client.post(
                     f"http://{self.ip}:{self.port}/api/{command}", params=parameters
                 )
@@ -71,5 +70,72 @@ class MSKMinerWebAPI(BaseWebAPI):
             except httpx.HTTPError:
                 raise APIError(f"Command failed: {command}")
 
+    async def send_get_command(self,
+                               command: str,
+                               ignore_errors: bool = False,
+                               allow_warning: bool = True,
+                               privileged: bool = False,
+    ) -> dict:
+        async with httpx.AsyncClient(transport=settings.transport()) as client:
+            try:
+                # auth
+                await client.post(
+                    f"http://{self.ip}:{self.port}/admin/login",
+                    data={"username": self.username, "password": self.pwd},
+                )
+            except httpx.HTTPError:
+                warnings.warn(f"Could not authenticate with miner web: {self}")
+            try:
+                resp = await client.get(
+                    f"http://{self.ip}:{self.port}/api/{command}"
+                )
+                if not resp.status_code == 200:
+                    if not ignore_errors:
+                        raise APIError(f"Command failed: {command}")
+                    warnings.warn(f"Command failed: {command}")
+                return resp.json()
+            except httpx.HTTPError:
+                raise APIError(f"Command failed: {command}")
+
     async def info_v1(self):
         return await self.send_command("info_v1")
+
+    async def info_app(self) -> dict:
+        return await self.send_get_command("info_app")
+
+    #todo вынести логику в другие общие функции
+    async def set_miner_conf(self, config: MinerConfig):
+        pools_data = []
+        for p in config.pools.groups[0].pools:
+            pools_data.append({
+                "url": p.url,
+                "user": p.user,
+                "pass": p.password
+            })
+
+        while len(pools_data) < 3:
+            pools_data.append({"url": "", "user": "", "pass": ""})
+
+        payload = {"pools": pools_data}
+
+        async with httpx.AsyncClient(transport=settings.transport()) as client:
+            try:
+                await client.post(
+                    f"http://{self.ip}:{self.port}/admin/login",
+                    data={"username": self.username, "password": self.pwd},
+                )
+            except httpx.HTTPError:
+                warnings.warn(f"Could not authenticate with miner web: {self}")
+
+            try:
+                resp = await client.post(
+                    f"http://{self.ip}:{self.port}/api/miner_settings",
+                    json=payload
+                )
+
+                if resp.status_code != 200:
+                    raise APIError(f"Command failed: miner_settings. Status: {resp.status_code}")
+
+                return resp.json()
+            except httpx.HTTPError as e:
+                raise APIError(f"HTTP error occurred: {e}")

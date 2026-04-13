@@ -25,6 +25,8 @@ class MinerFirmware(str, Enum):
     HIVEON = "Hive"
     LUXOS = "LuxOS"
     MARATHON = "MaraFW"
+    MSK = "MSKMiner"
+    PITBIT = "PitBit"
 
     def __str__(self):
         return self.value

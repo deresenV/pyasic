@@ -1,4 +1,5 @@
-from pyasic import APIError
+from pyasic import APIError, MinerConfig
+from pyasic.config import PoolConfig
 from pyasic.device.algorithm import AlgoHashRateType
 from pyasic.miners.backends import BMMiner
 from pyasic.miners.data import (
@@ -8,6 +9,7 @@ from pyasic.miners.data import (
     RPCAPICommand,
     WebAPICommand,
 )
+from pyasic.config.pools import Pool, PoolGroup
 from pyasic.web.mskminer import MSKMinerWebAPI
 
 MSKMINER_DATA_LOC = DataLocations(
@@ -141,3 +143,26 @@ class MSKMiner(BMMiner):
             except (LookupError, ValueError, TypeError):
                 pass
         return None
+
+
+    async def send_config(
+        self, config: MinerConfig, user_suffix: str | None = None
+    ) -> None:
+        return await self.web.set_miner_conf(config)
+
+    async def get_config(self) -> MinerConfig:
+        miner_data = await self.web.info_app()
+        raw_pools = miner_data.get("pools")
+        pools = []
+        for pool in raw_pools:
+            url = pool.get("url", None)
+            user = pool.get("user", None)
+            password = pool.get("pass", None)
+            pools.append(Pool(url=url, user=user, password=password))
+        miner_config = MinerConfig(pools=PoolConfig(groups = [PoolGroup(pools=pools)]))
+        return miner_config
+
+
+    async def get_fault_light(self) -> bool:
+        info_app = await self.web.info_app()
+        return info_app.get("blink", False)
