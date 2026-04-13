@@ -10,6 +10,7 @@ from pyasic.miners.data import (
     WebAPICommand,
 )
 from pyasic.config.pools import Pool, PoolGroup
+from pyasic.miners.device.firmware import MSKMinerFirmware
 from pyasic.web.mskminer import MSKMinerWebAPI
 
 MSKMINER_DATA_LOC = DataLocations(
@@ -58,7 +59,7 @@ MSKMINER_DATA_LOC = DataLocations(
 )
 
 
-class MSKMiner(BMMiner):
+class MSKMiner(MSKMinerFirmware, BMMiner):
     """Handler for MSKMiner"""
 
     data_locations = MSKMINER_DATA_LOC

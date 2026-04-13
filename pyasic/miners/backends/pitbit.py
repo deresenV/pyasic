@@ -1,4 +1,3 @@
-from importlib.metadata import always_iterable
 
 from pyasic.miners.backends import AntminerModern
 import asyncio
@@ -13,6 +12,7 @@ from pyasic.device.algorithm import AlgoHashRateType
 from pyasic.errors import APIError
 from pyasic.miners.backends.bmminer import BMMiner
 from pyasic.miners.backends.cgminer import CGMiner
+from pyasic.miners.device.firmware import PitBitFirmware
 from pyasic.miners.data import (
     DataFunction,
     DataLocations,
@@ -86,7 +86,7 @@ ANTMINER_MODERN_DATA_LOC = DataLocations(
 )
 
 
-class PitBitMiner(AntminerModern):
+class PitBitMiner(PitBitFirmware, AntminerModern):
     async def _change_mining_mode(self, mining_mode: int):
         response = await self.web.set_miner_conf({"bitmain-work-mode": mining_mode, "pools": []})
         return True

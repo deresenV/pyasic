@@ -30,6 +30,12 @@ class VNishFirmware(BaseMiner):
     firmware = MinerFirmware.VNISH
 
 
+class MSKMinerFirmware(BaseMiner):
+    firmware = MinerFirmware.MSK
+
+class PitBitFirmware(BaseMiner):
+    firmware = MinerFirmware.PITBIT
+
 class ePICFirmware(BaseMiner):
     firmware = MinerFirmware.EPIC
 
