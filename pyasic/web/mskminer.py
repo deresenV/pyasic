@@ -58,7 +58,6 @@ class MSKMinerWebAPI(BaseWebAPI):
             except httpx.HTTPError:
                 warnings.warn(f"Could not authenticate with miner web: {self}")
             try:
-                print(parameters)
                 resp = await client.post(
                     f"http://{self.ip}:{self.port}/api/{command}", params=parameters
                 )
