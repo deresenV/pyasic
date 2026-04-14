@@ -77,6 +77,7 @@ class MinerTypes(enum.Enum):
 MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
     MinerTypes.ANTMINER: {
         None: type("AntminerUnknown", (BMMiner, AntMinerMake), {}),
+        "ANTMINER LOADING_I": PitBitMiner,
         "ANTMINER D3": CGMinerD3,
         "ANTMINER HS3": BMMinerHS3,
         "ANTMINER L3+": BMMinerL3Plus,
@@ -107,7 +108,6 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER T17+": BMMinerT17Plus,
         "ANTMINER T17E": BMMinerT17e,
         "ANTMINER S19": BMMinerS19,
-        "ANTMINER LOADING_I": PitBitMinerS19,
         "ANTMINER S19_I": PitBitMinerS19,
         "ANTMINER S19L": BMMinerS19L,
         "ANTMINER S19 PRO": BMMinerS19Pro,
@@ -1307,85 +1307,6 @@ class MinerFactory:
                 return miner_model
             except (TypeError, LookupError):
                 pass
-        #todo fix
-        # login_url = f"https://{ip}/cgi-bin/luci/"
-        # api_url = f"https://{ip}/cgi-bin/luci/admin/status/overview"
-        #
-
-        # try:
-        #     async with session.post(
-        #             login_url,
-        #             data=login_data,
-        #             allow_redirects=True,
-        #             timeout=ClientTimeout(total=5)
-        #     ) as login_resp:
-        #         print(login_resp)
-        #
-        #     async with session.get(
-        #             api_url,
-        #             json={},
-        #             timeout=ClientTimeout(total=2)
-        #     ) as api_resp:
-        #         try:
-        #             result = await api_resp.json()
-        #             if api_resp.status == 200:
-        #                 print(f"{ip}: {result}")
-        #         except Exception as e:
-        #             print(e)
-        # except:
-        #     pass
-        #
-        #
-        # import asyncio
-        # import aiohttp
-        # from aiohttp import ClientTimeout
-        # async with aiohttp.ClientSession() as session:
-        #     login_url = f"https://{ip}/cgi-bin/luci/"
-        #     api_url = f"https://{ip}/cgi-bin/luci/admin/status/overview"
-        #
-        #     login_data = {
-        #         'luci_username': 'admin',
-        #         'luci_password': 'admin'
-        #     }
-        #     headers = {
-        #         'Referer': login_url,
-        #         'User-Agent': 'Mozilla/5.0 (Android)'
-        #     }
-        #
-        #     try:
-        #         # 1. Попытка входа
-        #         async with session.post(
-        #                 login_url,
-        #                 data=login_data,
-        #                 headers=headers,
-        #                 allow_redirects=True,
-        #                 timeout=ClientTimeout(total=5),
-        #                 ssl=False
-        #         ) as login_resp:
-        #             # Если после редиректа мы не в админке — авторизация не прошла
-        #             # print(123)
-        #             # if "/admin/" not in str(login_resp.url):
-        #             #     print(1234)
-        #             #     return None
-        #             print(login_resp.status)
-        #
-        #
-        #         # 2. Получение данных
-        #         async with session.get(
-        #                 api_url,
-        #                 timeout=ClientTimeout(total=5),
-        #                 ssl=False
-        #         ) as api_resp:
-        #             print(99)
-        #             print(api_resp.status)
-        #             if api_resp.status == 200:
-        #                 print(api_resp)
-        #                 raw_data = await api_resp.json()
-        #                 # Передаем полученные данные в ваш метод фильтрации
-        #                 return await self.miner_data(raw_data, filters, ip)
-        #     except Exception:
-        #         return None
-        #     return None
 
     async def get_miner_version_whatsminer(self, ip: str) -> str | None:
         sock_json_data = await self.send_api_command(ip, "get_version")

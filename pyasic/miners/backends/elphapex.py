@@ -118,18 +118,18 @@ class ElphapexMiner(StockFirmware):
         await self.web.set_miner_conf(config.as_elphapex(user_suffix=user_suffix))
 
     async def fault_light_on(self) -> bool:
-        data = await self.web.blink(blink=True)
-        if data:
-            if data.get("code") == "B000":
-                self.light = True
-        return self.light if self.light is not None else False
+        data = await self.web.send_command("luci/ftm_ledtest",
+                            leds_blue = 1, leds_red = 0, leds_flash = 1, leds_time = 0)
+        if data.get("stats") == 'success':
+            return True
+        return False
 
     async def fault_light_off(self) -> bool:
-        data = await self.web.blink(blink=False)
-        if data:
-            if data.get("code") == "B100":
-                self.light = False
-        return self.light if self.light is not None else False
+        data = await self.web.send_command("luci/ftm_ledtest",
+                            leds_blue=0, leds_red=0, leds_flash=0, leds_time=10)
+        if data.get("stats") == 'success':
+            return True
+        return False
 
     async def reboot(self) -> bool:
         data = await self.web.reboot()
@@ -409,3 +409,16 @@ class ElphapexMiner(StockFirmware):
         except LookupError:
             pass
         return pools_data
+
+
+    async def stop_mining(self) -> bool:
+        response = await self.web.send_command("luci/setworkmode", workmode=-1000)
+        if response:
+            return True
+        return False
+
+    async def resume_mining(self) -> bool:
+        response = await self.web.send_command("luci/setworkmode", workmode=0)
+        if response:
+            return True
+        return False
