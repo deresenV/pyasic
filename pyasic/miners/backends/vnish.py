@@ -363,3 +363,10 @@ class VNish(VNishFirmware, BMMiner):
             return True
         else:
             return False
+
+    async def get_fault_light(self) -> bool:
+        data = await self.web.send_command("status")
+        if data:
+            status = data.get("find_miner", False)
+            return status
+        return False
