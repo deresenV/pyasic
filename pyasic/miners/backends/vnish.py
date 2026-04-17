@@ -332,24 +332,8 @@ class VNish(VNishFirmware, BMMiner):
         return self.config
 
     async def set_power_limit(self, wattage: int) -> bool:
-        config = await self.get_config()
+        new_wattage = wattage
 
-        # Check if mining mode is preset mode and has available presets
-        if not isinstance(config.mining_mode, MiningModePreset):
-            return False
-
-        valid_presets = [
-            preset.power
-            for preset in config.mining_mode.available_presets
-            if (preset.tuned and preset.power is not None and preset.power <= wattage)
-        ]
-
-        if not valid_presets:
-            return False
-
-        new_wattage = max(valid_presets)
-
-        # Set power to highest preset <= wattage
         try:
             await self.web.set_power_limit(new_wattage)
             updated_settings = await self.web.settings()
@@ -360,9 +344,14 @@ class VNish(VNishFirmware, BMMiner):
             return False
 
         if int(updated_settings["miner"]["overclock"]["preset"]) == new_wattage:
+            try:
+                await self.web.restart_vnish()
+            except:
+                pass
             return True
         else:
             return False
+
 
     async def get_fault_light(self) -> bool:
         data = await self.web.send_command("status")
@@ -370,3 +359,8 @@ class VNish(VNishFirmware, BMMiner):
             status = data.get("find_miner", False)
             return status
         return False
+
+    async def get_voltage(self) -> float | None:
+        perf_summary = await self.web.perf_summary()
+        current_presset = perf_summary.get("current_preset", {}).get("name", None)
+        return current_presset

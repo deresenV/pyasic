@@ -59,7 +59,7 @@ class MSKMinerWebAPI(BaseWebAPI):
                 warnings.warn(f"Could not authenticate with miner web: {self}")
             try:
                 resp = await client.post(
-                    f"http://{self.ip}:{self.port}/api/{command}", params=parameters
+                    f"http://{self.ip}:{self.port}/api/{command}", json=parameters
                 )
                 if not resp.status_code == 200:
                     if not ignore_errors:

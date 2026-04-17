@@ -1,3 +1,5 @@
+from http.client import responses
+
 from pyasic import APIError, MinerConfig
 from pyasic.config import PoolConfig
 from pyasic.device.algorithm import AlgoHashRateType
@@ -167,3 +169,47 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
     async def get_fault_light(self) -> bool:
         info_app = await self.web.info_app()
         return info_app.get("blink", False)
+
+
+    async def resume_mining(self) -> bool:
+        try:
+            response = await self.web.send_command("miner_resume")
+            return True
+        except:
+            return False
+
+    async def stop_mining(self) -> bool:
+        try:
+            response = await self.web.send_command("miner_pause")
+            return True
+        except:
+            return False
+
+    async def _get_voltage(self) -> float | None:
+        response = await self.web.send_get_command("tune/v2/current")
+        try:
+            if not response:
+                return None
+            current_params = response.get('params')
+            if current_params:
+                if int(current_params.get("tune_type", 1)) == 0:
+                    current_profile = current_params.get("tune_profile", 0)
+                    return 2000 + int(current_profile)*100
+            return None
+        except:
+            return None
+
+
+    async def get_voltage(self) -> float | None:
+        return await self._get_voltage()
+
+    async def set_power_limit(self, wattage: int) -> bool:
+        power_id = 0 - (2000 - wattage) // 100
+        payload = {
+            "profile_id": power_id,
+            "profile_type": "power",
+            "set_preset_without_tune": True,
+            "tune_eff": False
+        }
+        response = await self.web.send_command("tune/v3/apply", False, True,False, **payload)
+        return True
