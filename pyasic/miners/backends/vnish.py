@@ -239,19 +239,9 @@ class VNish(VNishFirmware, BMMiner):
         return None
 
     async def _get_wattage_limit(self, web_settings: dict | None = None) -> int | None:
-        if web_settings is None:
-            web_settings = await self.web.summary()
-
-        if web_settings is not None:
-            try:
-                wattage_limit = web_settings["miner"]["overclock"]["preset"]
-                if wattage_limit == "disabled":
-                    return None
-                return int(wattage_limit)
-            except (KeyError, TypeError):
-                pass
-
-        return None
+        perf_summary = await self.web.perf_summary()
+        current_presset = perf_summary.get("current_preset", {}).get("name", None)
+        return current_presset
 
     async def _get_fw_ver(self, web_summary: dict | None = None) -> str | None:
         if web_summary is None:
@@ -359,8 +349,3 @@ class VNish(VNishFirmware, BMMiner):
             status = data.get("find_miner", False)
             return status
         return False
-
-    async def get_voltage(self) -> float | None:
-        perf_summary = await self.web.perf_summary()
-        current_presset = perf_summary.get("current_preset", {}).get("name", None)
-        return current_presset

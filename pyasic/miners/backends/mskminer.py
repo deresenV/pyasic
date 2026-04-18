@@ -185,7 +185,19 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         except:
             return False
 
-    async def _get_voltage(self) -> float | None:
+
+    async def set_power_limit(self, wattage: int) -> bool:
+        power_id = 0 - (2000 - wattage) // 100
+        payload = {
+            "profile_id": power_id,
+            "profile_type": "power",
+            "set_preset_without_tune": True,
+            "tune_eff": False
+        }
+        response = await self.web.send_command("tune/v3/apply", False, True,False, **payload)
+        return True
+
+    async def get_wattage_limit(self) -> int | None:
         response = await self.web.send_get_command("tune/v2/current")
         try:
             if not response:
@@ -199,17 +211,6 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         except:
             return None
 
-
-    async def get_voltage(self) -> float | None:
-        return await self._get_voltage()
-
-    async def set_power_limit(self, wattage: int) -> bool:
-        power_id = 0 - (2000 - wattage) // 100
-        payload = {
-            "profile_id": power_id,
-            "profile_type": "power",
-            "set_preset_without_tune": True,
-            "tune_eff": False
-        }
-        response = await self.web.send_command("tune/v3/apply", False, True,False, **payload)
-        return True
+    async def get_wattage(self) -> int | None:
+        info_app = await self.web.info_app()
+        return info_app.get("power", None)
