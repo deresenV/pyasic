@@ -151,6 +151,16 @@ class Pool(MinerConfigValue):
             "pass": self.password,
         }
 
+    def as_btminer_custom(
+        self, *args: Any, user_suffix: str | None = None, **kwargs: Any
+    ) -> dict:
+        idx = args[0] if args else kwargs.get("idx", 1)
+        return {
+            f"cbid.pools.default.pool{idx}url": self.url,
+            f"cbid.pools.default.pool{idx}user": f"{self.user}{user_suffix or ''}",
+            f"cbid.pools.default.pool{idx}pw": self.password,
+        }
+
     @classmethod
     def from_dict(cls, dict_conf: dict | None) -> Pool:
         if dict_conf is None:
@@ -389,6 +399,23 @@ class PoolGroup(MinerConfigValue):
     def as_vnish(self, user_suffix: str | None = None) -> dict:
         return {"pools": [p.as_vnish(user_suffix=user_suffix) for p in self.pools]}
 
+    def as_btminer_custom(
+        self, *args: Any, user_suffix: str | None = None, **kwargs: Any
+    ) -> dict:
+        pools: dict[str, str] = {}
+        idx = 0
+        while idx < 3:
+            if len(self.pools) > idx:
+                pools.update(
+                    **self.pools[idx].as_btminer_custom(idx + 1, user_suffix=user_suffix)
+                )
+            else:
+                pools.update(
+                    **Pool(url="", user="", password="").as_btminer_custom(idx + 1)
+                )
+            idx += 1
+        return pools
+
     @classmethod
     def from_dict(cls, dict_conf: dict | None) -> PoolGroup:
         if dict_conf is None:
@@ -549,6 +576,11 @@ class PoolConfig(MinerConfigValue):
         if len(self.groups) > 0:
             return {"pools": self.groups[0].as_btminer_v3(user_suffix=user_suffix)}
         return {"pools": PoolGroup().as_btminer_v3()}
+
+    def as_btminer_custom(self, user_suffix: str | None = None) -> dict:
+        if len(self.groups) > 0:
+            return self.groups[0].as_btminer_custom(user_suffix=user_suffix)
+        return PoolGroup().as_btminer_custom()
 
     def as_am_old(
         self, *args: Any, user_suffix: str | None = None, **kwargs: Any

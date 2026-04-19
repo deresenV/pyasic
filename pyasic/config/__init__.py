@@ -123,6 +123,11 @@ class MinerConfig(BaseModel):
             **self.mining_mode.as_btminer_v3(),
         }
 
+    def as_btminer_custom(self, user_suffix: str | None = None) -> dict:
+        return {
+           **self.pools.as_btminer_custom()
+        }
+
     def as_am_old(self, user_suffix: str | None = None) -> dict:
         """Generates the configuration in the format suitable for old versions of Antminers."""
         return {

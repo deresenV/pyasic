@@ -28,6 +28,7 @@ from pyasic.errors import APIError
 from pyasic.miners.data import DataFunction, DataLocations, DataOptions, RPCAPICommand
 from pyasic.miners.device.firmware import StockFirmware
 from pyasic.rpc.btminer import BTMinerRPCAPI, BTMinerV3RPCAPI
+from pyasic.web.whatsminer import BTMinerWebAPI
 
 
 class BTMiner(StockFirmware):
@@ -905,6 +906,9 @@ class BTMinerV3(StockFirmware):
     _rpc_cls = BTMinerV3RPCAPI
     rpc: BTMinerV3RPCAPI
 
+    web = BTMinerWebAPI
+    _web_cls = BTMinerWebAPI
+
     data_locations = BTMINERV3_DATA_LOC
 
     supports_shutdown = True
@@ -941,13 +945,23 @@ class BTMinerV3(StockFirmware):
     async def send_config(
         self, config: MinerConfig, user_suffix: str | None = None
     ) -> None:
-        self.config = config
+        config_dict = config.as_btminer_custom(user_suffix)
+        device_info = await self.rpc.get_device_info()
+        if config_dict:
+            cointype = "BTC"
+            if device_info:
+                cointype = device_info.get("msg",{}).get("miner", {}).get("cointype", "BTC")
 
-        conf = config.as_btminer_v3(user_suffix=user_suffix)
-
-        await asyncio.gather(
-            *[self.rpc.send_command(k, parameters=v) for k, v in conf.values()]
-        )
+            full_config = {
+                "cbi.submit": "1",
+                "cbid.pools.default.coin_type": cointype,
+                "cbi.apply": "Save & Apply",
+                **config_dict
+            }
+            await self.web.send_command(
+                command="cgi-bin/luci/admin/network/btminer",
+                **full_config
+            )
 
     async def fault_light_off(self) -> bool:
         try:
