@@ -292,6 +292,9 @@ class MinerProtocol(Protocol):
         """
         return await self._get_hashrate()
 
+    async def log(self) -> str:
+        return ""
+
     async def get_hashboards(self) -> list[HashBoard]:
         """Get hashboard data from the miner in the form of [`HashBoard`][pyasic.data.HashBoard].
 

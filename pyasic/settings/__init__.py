@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 class Settings(BaseModel):
     network_ping_retries: int = Field(default=1)
     network_ping_timeout: int = Field(default=3)
-    network_scan_semaphore: int | None = Field(default=None)
+    network_scan_semaphore: int | None = Field(default=255)
     factory_get_retries: int = Field(default=1)
     factory_get_timeout: int = Field(default=3)
     get_data_retries: int = Field(default=1)

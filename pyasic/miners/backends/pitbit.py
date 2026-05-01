@@ -1,4 +1,7 @@
+import httpx
+from _testcapi import awaitType
 
+from pyasic import settings
 from pyasic.miners.backends import AntminerModern
 import asyncio
 import logging
@@ -96,3 +99,46 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
 
     async def resume_mining(self) -> bool:
         return await self._change_mining_mode(0)
+
+
+    #todo Перенести в web класс
+    async def miner_type(self):
+        return await self.web.send_command("miner_type")
+
+    async def system_info(self):
+        return await self.web.send_command("get_system_info")
+
+    async def stats(self):
+        return await self.web.send_command("stats")
+
+    async def api_conf(self):
+        return await self.web.send_command("get_api_conf")
+
+    async def log(self):
+        url = f"http://{self.ip}:{80}/cgi-bin/{"log"}.cgi"
+        auth = httpx.DigestAuth("root", "root")
+        try:
+            async with httpx.AsyncClient(transport=settings.transport()) as client:
+                data = await client.get(url, auth=auth)
+                return data.text
+        except httpx.HTTPError as e:
+            return {"success": False, "message": f"HTTP error occurred: {str(e)}"}
+
+    async def get_uptime(self) -> int | None:
+        raw_json = await self.web.send_command("stats")
+        if raw_json:
+            try:
+                uptime = raw_json.get("STATS", {})[0].get("elapsed", 0)
+                return int(uptime)
+            except: pass
+        return None
+
+    async def get_wattage(self) -> int | None:
+        raw_json = await self.web.send_command("stats")
+        if raw_json:
+            try:
+                power = raw_json.get("STATS", {})[0].get("power")
+                return int(power)
+            except:
+                pass
+        return None

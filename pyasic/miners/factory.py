@@ -824,7 +824,6 @@ class MinerFactory:
             }
             model_fn = miner_model_fns.get(miner_type)
             version_fn = miner_version_fns.get(miner_type)
-
             if model_fn is not None:
                 # noinspection PyArgumentList
                 model_task = asyncio.create_task(model_fn(ip))
@@ -1228,11 +1227,31 @@ class MinerFactory:
         ]
         result = await concurrent_get_first_result(tasks, lambda x: x is not None)
         if not result:
-            tasks = [
-                asyncio.create_task(self._get_model_antminer_web(ip)),
+            task = [
+                asyncio.create_task(self._get_model_pitbit_web(ip))
             ]
-            result = await concurrent_get_first_result(tasks, lambda x: x is not None)
+            result = await concurrent_get_first_result(task, lambda x: x is not None)
+            if not result:
+                tasks = [
+                    asyncio.create_task(self._get_model_antminer_web(ip)),
+                ]
+                result = await concurrent_get_first_result(tasks, lambda x: x is not None)
         return result
+
+
+    async def _get_model_pitbit_web(self, ip: str) -> str | None:
+        auth = httpx.DigestAuth(
+            "root", settings.get("default_antminer_web_password", "root")
+        )
+        web_json_data =  await self.send_web_command(
+            ip, "/cgi-bin/miner_type.cgi", auth)
+        if web_json_data is not None:
+            try:
+                miner_model = web_json_data['miner_type']
+                miner_model = miner_model[:miner_model.index("(")]+"_i"
+                return miner_model
+            except: pass
+        return None
 
     async def _get_model_antminer_web(self, ip: str) -> str | None:
         # last resort, this is slow
