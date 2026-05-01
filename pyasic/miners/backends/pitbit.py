@@ -1,21 +1,20 @@
-import httpx
-from _testcapi import awaitType
+# ------------------------------------------------------------------------------
+#  Copyright 2022 Upstream Data Inc                                            -
+#                                                                              -
+#  Licensed under the Apache License, Version 2.0 (the "License");             -
+#  you may not use this file except in compliance with the License.            -
+#  You may obtain a copy of the License at                                     -
+#                                                                              -
+#      http://www.apache.org/licenses/LICENSE-2.0                              -
+#                                                                              -
+#  Unless required by applicable law or agreed to in writing, software         -
+#  distributed under the License is distributed on an "AS IS" BASIS,           -
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    -
+#  See the License for the specific language governing permissions and         -
+#  limitations under the License.                                              -
+# ------------------------------------------------------------------------------
 
-from pyasic import settings
-from pyasic.miners.backends import AntminerModern
-import asyncio
-import logging
-from pathlib import Path
-
-from pyasic.config import MinerConfig, MiningModeConfig
-from pyasic.data import Fan, HashBoard
-from pyasic.data.error_codes import X19Error
-from pyasic.data.pools import PoolMetrics, PoolUrl
-from pyasic.device.algorithm import AlgoHashRateType
-from pyasic.errors import APIError
-from pyasic.miners.backends.bmminer import BMMiner
-from pyasic.miners.backends.cgminer import CGMiner
-from pyasic.miners.device.firmware import PitBitFirmware
+from pyasic.miners.backends.antminer import AntminerModern
 from pyasic.miners.data import (
     DataFunction,
     DataLocations,
@@ -23,11 +22,10 @@ from pyasic.miners.data import (
     RPCAPICommand,
     WebAPICommand,
 )
-from pyasic.rpc.antminer import AntminerRPCAPI
-from pyasic.ssh.antminer import AntminerModernSSH
-from pyasic.web.antminer import AntminerModernWebAPI, AntminerOldWebAPI
+from pyasic.miners.device.firmware import PitBitFirmware
+from pyasic.web.pitbit import PitBitWebAPI
 
-ANTMINER_MODERN_DATA_LOC = DataLocations(
+PITBIT_DATA_LOC = DataLocations(
     **{
         str(DataOptions.SERIAL_NUMBER): DataFunction(
             "_get_serial_number",
@@ -90,8 +88,15 @@ ANTMINER_MODERN_DATA_LOC = DataLocations(
 
 
 class PitBitMiner(PitBitFirmware, AntminerModern):
-    async def _change_mining_mode(self, mining_mode: int):
-        response = await self.web.set_miner_conf({"bitmain-work-mode": mining_mode, "pools": []})
+    """Handler for PitBit firmware miners."""
+
+    _web_cls = PitBitWebAPI
+    web: PitBitWebAPI
+
+    data_locations = PITBIT_DATA_LOC
+
+    async def _change_mining_mode(self, mining_mode: int) -> bool:
+        await self.web.set_miner_conf({"bitmain-work-mode": mining_mode, "pools": []})
         return True
 
     async def stop_mining(self) -> bool:
@@ -100,45 +105,21 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
     async def resume_mining(self) -> bool:
         return await self._change_mining_mode(0)
 
-
-    #todo Перенести в web класс
-    async def miner_type(self):
-        return await self.web.send_command("miner_type")
-
-    async def system_info(self):
-        return await self.web.send_command("get_system_info")
-
-    async def stats(self):
-        return await self.web.send_command("stats")
-
-    async def api_conf(self):
-        return await self.web.send_command("get_api_conf")
-
-    async def log(self):
-        url = f"http://{self.ip}:{80}/cgi-bin/{"log"}.cgi"
-        auth = httpx.DigestAuth("root", "root")
-        try:
-            async with httpx.AsyncClient(transport=settings.transport()) as client:
-                data = await client.get(url, auth=auth)
-                return data.text
-        except httpx.HTTPError as e:
-            return {"success": False, "message": f"HTTP error occurred: {str(e)}"}
-
     async def get_uptime(self) -> int | None:
-        raw_json = await self.web.send_command("stats")
-        if raw_json:
+        data = await self.web.stats()
+        if data:
             try:
-                uptime = raw_json.get("STATS", {})[0].get("elapsed", 0)
-                return int(uptime)
-            except: pass
+                return int(data.get("STATS", {})[0].get("elapsed", 0))
+            except (LookupError, TypeError, ValueError):
+                pass
         return None
 
     async def get_wattage(self) -> int | None:
-        raw_json = await self.web.send_command("stats")
-        if raw_json:
+        data = await self.web.stats()
+        if data:
             try:
-                power = raw_json.get("STATS", {})[0].get("power")
-                return int(power)
-            except:
+                return int(data.get("STATS", {})[0].get("power"))
+            except (LookupError, TypeError, ValueError):
                 pass
         return None
+

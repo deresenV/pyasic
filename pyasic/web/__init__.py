@@ -14,6 +14,7 @@
 #  limitations under the License.                                              -
 # ------------------------------------------------------------------------------
 from .antminer import AntminerModernWebAPI, AntminerOldWebAPI
+from .pitbit import PitBitWebAPI
 from .auradine import AuradineWebAPI
 from .base import BaseWebAPI
 from .braiins_os import BOSerWebAPI, BOSMinerWebAPI
