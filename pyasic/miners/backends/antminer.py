@@ -16,6 +16,7 @@
 import asyncio
 import logging
 from pathlib import Path
+import re
 
 from pyasic.config import MinerConfig, MiningModeConfig
 from pyasic.data import Fan, HashBoard
@@ -129,6 +130,14 @@ class AntminerModern(BMMiner):
             except (LookupError, ValueError, TypeError):
                 pass
         return None
+
+    async def get_logs(self) -> str:
+        if hasattr(self, "logs"):
+            return self.logs
+
+        logs = await self.web.get_logs()
+        self.logs = logs
+        return logs
 
     async def get_hashboards(self) -> list[HashBoard]:
         answer = []
@@ -287,6 +296,44 @@ class AntminerModern(BMMiner):
             pass
         return None
 
+    async def _parse_pattern_logs(self, target_patterns: set = None, pattern=None) -> list:
+        raw_log = await self.get_logs()
+        miner_logs = [line.strip() for line in raw_log.splitlines() if line.strip()]
+
+        if not pattern:
+            pattern = re.compile(
+                r'level=(?P<level>\w+)\s+'
+                r'(?P<pid>\d+)\s+'
+                r'(?:chain=(?P<chain>\d+)\s*)?'
+                r'(?:error="(?P<error>[^"]+)"\s*)?'
+                r'msg="(?P<msg>[^"]+)"'
+            )
+
+        seen_signatures = set()
+        found_pattern_logs = []
+
+        for log in miner_logs:
+            match = pattern.search(log)
+            if match:
+                data = match.groupdict()
+                if target_patterns:
+                    all_values_text = " ".join(str(v) for v in data.values() if v is not None).lower()
+                    if not any(err.lower() in all_values_text for err in target_patterns):
+                        continue
+
+                sig_list = []
+                for key, value in data.items():
+                    if key.lower() not in ['pid', 'time']:
+                        sig_list.append(value)
+
+                signature = tuple(sig_list)
+
+                if signature not in seen_signatures:
+                    found_pattern_logs.append(data)
+                    seen_signatures.add(signature)
+
+        return found_pattern_logs
+
     async def _get_errors(  # type: ignore[override]
         self, web_summary: dict | None = None
     ) -> list[X19Error]:
@@ -307,6 +354,14 @@ class AntminerModern(BMMiner):
                         continue
             except LookupError:
                 pass
+
+        log_errors =  await self._parse_pattern_logs(target_patterns={"asic num error"})
+        for error in log_errors:
+            chain = error.get("chain", None)
+            message = error.get("msg", None)
+            if chain and message:
+                errors.append(X19Error(error_message=f"chain {chain}: {message}"))
+
         return errors
 
     async def _get_hashboards(self) -> list[HashBoard]:  # type: ignore[override]

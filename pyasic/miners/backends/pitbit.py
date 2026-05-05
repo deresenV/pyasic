@@ -1,3 +1,5 @@
+import re
+
 import httpx
 from _testcapi import awaitType
 
@@ -8,7 +10,7 @@ import logging
 from pathlib import Path
 
 from pyasic.config import MinerConfig, MiningModeConfig
-from pyasic.data import Fan, HashBoard
+from pyasic.data import Fan, HashBoard, MinerErrorData
 from pyasic.data.error_codes import X19Error
 from pyasic.data.pools import PoolMetrics, PoolUrl
 from pyasic.device.algorithm import AlgoHashRateType
@@ -114,8 +116,8 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
     async def api_conf(self):
         return await self.web.send_command("get_api_conf")
 
-    async def log(self):
-        url = f"http://{self.ip}:{80}/cgi-bin/{"log"}.cgi"
+    async def serial_get(self):
+        url = f"http://{self.ip}:{80}/cgi-bin_n/{"serial_get"}.cgi"
         auth = httpx.DigestAuth("root", "root")
         try:
             async with httpx.AsyncClient(transport=settings.transport()) as client:
@@ -142,3 +144,36 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
             except:
                 pass
         return None
+
+    async def get_hashboards_from_logs(self, hashboards):
+        log_pattern = re.compile(r"Detected (?P<chips>\d+) chips .* on chain (?P<chain>\d+)")
+        hashboards_from_logs = await self._parse_pattern_logs(pattern=log_pattern)
+        if len(hashboards_from_logs)>0:
+            for chain in hashboards_from_logs:
+                try:
+                    hashboards[int(chain.get("chain", 0))].chips = int(chain.get("chips", 0))
+                except IndexError:
+                    try:
+                        hashboards.append(HashBoard(slot=int(chain.get("chain")), chips=int(chain.get("chips")), expected_chips=self.expected_chips))
+                    except:pass
+                except Exception as e:
+                    pass
+        return hashboards
+
+    async def get_errors(self) -> list[MinerErrorData]:
+        errors = await super().get_errors()
+        pattern = re.compile(r"\[(?P<level>\w+)\]\s+[\d-]+\s+[\d:.]+\s+\w+\s+(?P<msg>.*)")
+        errors_from_log = await self._parse_pattern_logs(target_patterns={"Cannot detect power version!"}, pattern=pattern)
+        if len(errors_from_log)>0:
+            for error in errors_from_log:
+                errors.append(X19Error(error_message=f"{" ".join(value for value in error.values())}"))
+        return errors
+
+
+    async def get_hashboards(self) -> list[HashBoard]:
+        hashboards = await super().get_hashboards()
+        if len(hashboards) != self.expected_hashboards:
+            hashboards_from_log= await self.get_hashboards_from_logs(hashboards)
+            if hashboards_from_log:
+                return hashboards_from_log
+        return hashboards

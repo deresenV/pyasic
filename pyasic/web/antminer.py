@@ -137,6 +137,23 @@ class AntminerModernWebAPI(BaseWebAPI):
                     pass
         return {command: {}}
 
+
+    async def get_logs(self) -> str:
+        range_size = 10240
+
+        url = f"http://{self.ip}:{self.port}/cgi-bin/log.cgi"
+        auth = httpx.DigestAuth(self.username, self.pwd)
+
+        headers = {"Range": f"bytes=-{range_size}"}
+
+        try:
+            async with httpx.AsyncClient(transport=settings.transport()) as client:
+                data = await client.get(url, auth=auth, headers=headers)
+                return data.text
+        except Exception:
+            return ""
+    
+
     async def get_miner_conf(self) -> dict:
         """Retrieve the miner configuration from the Antminer device.
 
@@ -419,3 +436,4 @@ class AntminerOldWebAPI(BaseWebAPI):
             filename=file.name,
             keep_settings=keep_settings,
         )
+

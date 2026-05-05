@@ -292,7 +292,7 @@ class MinerProtocol(Protocol):
         """
         return await self._get_hashrate()
 
-    async def log(self) -> str:
+    async def get_logs(self) -> str:
         return ""
 
     async def get_hashboards(self) -> list[HashBoard]:
