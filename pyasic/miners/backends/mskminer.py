@@ -1,7 +1,8 @@
 from http.client import responses
 
 from pyasic import APIError, MinerConfig
-from pyasic.config import PoolConfig
+from pyasic.config import PoolConfig, FanModeType, FanModeConfig, FanModeNormal
+from pyasic.data import HashBoard
 from pyasic.device.algorithm import AlgoHashRateType
 from pyasic.miners.backends import BMMiner
 from pyasic.miners.data import (
@@ -154,37 +155,32 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         return await self.web.set_miner_conf(config)
 
     async def get_config(self) -> MinerConfig:
-        miner_data = await self.web.info_app()
-        raw_pools = miner_data.get("pools")
+        raw_pools = await self.web.pools()
+        raw_config = await self.web.advanced_config()
+        minimum_fans = raw_config.get("min-fan-num", None)
+        if minimum_fans:
+            fan_mode = FanModeNormal(minimum_fans=minimum_fans)
+        else:
+            fan_mode = FanModeConfig.default()
         pools = []
         for pool in raw_pools:
             url = pool.get("url", None)
             user = pool.get("user", None)
             password = pool.get("pass", None)
             pools.append(Pool(url=url, user=user, password=password))
-        miner_config = MinerConfig(pools=PoolConfig(groups = [PoolGroup(pools=pools)]))
+
+        miner_config = MinerConfig(pools=PoolConfig(groups = [PoolGroup(pools=pools)]), fan_mode=fan_mode)
         return miner_config
 
 
     async def get_fault_light(self) -> bool:
-        info_app = await self.web.info_app()
-        return info_app.get("blink", False)
-
+        return await self.web.blink_status()
 
     async def resume_mining(self) -> bool:
-        try:
-            response = await self.web.send_command("miner_resume")
-            return True
-        except:
-            return False
+        return await self.web.miner_resume()
 
     async def stop_mining(self) -> bool:
-        try:
-            response = await self.web.send_command("miner_pause")
-            return True
-        except:
-            return False
-
+        return await self.web.miner_pause()
 
     async def set_power_limit(self, wattage: int) -> bool:
         power_id = 0 - (2000 - wattage) // 100
@@ -198,7 +194,7 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         return True
 
     async def get_wattage_limit(self) -> int | None:
-        response = await self.web.send_get_command("tune/v2/current")
+        response = await self.web.tune_v2_current()
         try:
             if not response:
                 return None
@@ -212,5 +208,21 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
             return None
 
     async def get_wattage(self) -> int | None:
-        info_app = await self.web.info_app()
-        return info_app.get("power", None)
+        return await self.web.power()
+
+    async def _get_hashboards(self, rpc_stats: dict | None = None) -> list[HashBoard]:
+        legacy_hashboards = await super()._get_hashboards()
+        temps_raw = await self.web.temp()
+        if temps_raw:
+            inlet_values = temps_raw.get("inlet_values", [])
+            outlet_values = temps_raw.get("outlet_values", [])
+            for index, hashboard in enumerate(legacy_hashboards):
+                try:
+                    hashboard.inlet_temp = inlet_values[index]
+                    hashboard.outlet_temp = outlet_values[index]
+                except:
+                    continue
+        return legacy_hashboards
+
+    async def get_hashboards(self) -> list[HashBoard]:
+        return await self._get_hashboards()

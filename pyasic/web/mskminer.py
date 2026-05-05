@@ -71,9 +71,7 @@ class MSKMinerWebAPI(BaseWebAPI):
 
     async def send_get_command(self,
                                command: str,
-                               ignore_errors: bool = False,
-                               allow_warning: bool = True,
-                               privileged: bool = False,
+                               ignore_errors: bool = False
     ) -> dict:
         async with httpx.AsyncClient(transport=settings.transport()) as client:
             try:
@@ -138,3 +136,40 @@ class MSKMinerWebAPI(BaseWebAPI):
                 return resp.json()
             except httpx.HTTPError as e:
                 raise APIError(f"HTTP error occurred: {e}")
+
+    async def temp(self) -> dict:
+        info_app = await self.info_app()
+        return info_app.get("temp", {})
+
+    async def power(self) -> int | None:
+        info_app = await self.info_app()
+        return info_app.get("power", None)
+
+    async def tune_v2_current(self) -> dict | None:
+        return await self.send_get_command("tune/v2/current")
+
+    async def miner_pause(self) -> bool:
+        try:
+            await self.send_command("miner_pause")
+            return True
+        except:
+            return False
+
+    async def miner_resume(self) -> bool:
+        try:
+            await self.send_command("miner_resume")
+            return True
+        except:
+            return False
+
+    async def blink_status(self):
+        info_app = await self.info_app()
+        return info_app.get("blink", False)
+
+    async def pools(self) -> list:
+        miner_data = await self.info_app()
+        return miner_data.get("pools", [])
+
+    async def advanced_config(self) -> dict:
+        info_app = await self.info_app()
+        return info_app.get("adv_config", {}).get("all", [])
