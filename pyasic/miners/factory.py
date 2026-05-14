@@ -655,7 +655,8 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "S19J-PRO": MSKMinerS19JPro,
         "S19J-PRO+": MSKMinerS19JProPlus,
         "S19I": MSKMinerS19i,
-        "S19K-PRO": MSKMinerS19KPro
+        "S19K-PRO": MSKMinerS19KPro,
+        "T21": MSKMinerT21
     },
     MinerTypes.LUX_OS: {
         None: LUXMiner,
