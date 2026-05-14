@@ -117,7 +117,7 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
         return await self.web.send_command("get_api_conf")
 
     async def serial_get(self):
-        url = f"http://{self.ip}:{80}/cgi-bin_n/{"serial_get"}.cgi"
+        url = f"http://{self.ip}:{80}/cgi-bin_n/serial_get.cgi"
         auth = httpx.DigestAuth("root", "root")
         try:
             async with httpx.AsyncClient(transport=settings.transport()) as client:
