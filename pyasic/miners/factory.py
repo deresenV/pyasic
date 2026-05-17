@@ -651,6 +651,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
     },
     MinerTypes.MSKMINER: {
         None: MSKMiner,
+        "L7": MSKMinerL7,
         "S19-88": MSKMinerS19NoPIC,
         "S19J-PRO": MSKMinerS19JPro,
         "S19J-PRO+": MSKMinerS19JProPlus,

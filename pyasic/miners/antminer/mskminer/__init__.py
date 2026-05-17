@@ -14,5 +14,6 @@
 #  limitations under the License.                                              -
 # ------------------------------------------------------------------------------
 
+from .X7 import *
 from .X19 import *
 from .X21 import *
