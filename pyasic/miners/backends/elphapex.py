@@ -343,7 +343,7 @@ class ElphapexMiner(StockFirmware):
 
         if web_summary is not None:
             try:
-                return int(web_summary["SUMMARY"][1]["elapsed"])
+                return int(web_summary["SUMMARY"][0]["elapsed"])
             except LookupError:
                 pass
         return None
