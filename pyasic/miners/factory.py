@@ -951,6 +951,8 @@ class MinerFactory:
         if "Miner UI" in web_text:
             return MinerTypes.AURADINE
         #TODO Проверка для msk
+        if "CYNW0VLX" in web_text:
+            return MinerTypes.MSKMINER
         return MinerTypes.ANTMINER
 
     async def _get_miner_socket(self, ip: str) -> MinerTypes | None:
@@ -1097,7 +1099,6 @@ class MinerFactory:
                 if not d:
                     break
                 data += d
-
             writer.close()
             await writer.wait_closed()
         except asyncio.CancelledError:
@@ -1110,7 +1111,6 @@ class MinerFactory:
             return None
 
         data_str = await self._fix_api_data(data)
-
         try:
             data_dict = json.loads(data_str)
         except json.JSONDecodeError:
@@ -1621,11 +1621,34 @@ class MinerFactory:
 
     async def get_miner_model_mskminer(self, ip: str) -> str | None:
         sock_json_data = await self.send_api_command(ip, "info_app")
-        if sock_json_data is not None:
+        if sock_json_data:
             try:
                 return sock_json_data["miner_type"]
             except LookupError:
                 pass
+        else:
+            async with httpx.AsyncClient(transport=settings.transport()) as client:
+                try:
+                    # auth
+                    await client.post(
+                        f"http://{ip}:80/admin/login",
+                        data={"username": settings.get("default_mskminer_web_password", "root"), "password": settings.get("default_mskminer_web_password", "root")},
+                    )
+                    response = await client.get(
+                        f"http://{ip}:80/api/info_app",
+                    )
+                    data_str = await self._fix_api_data(response.content)
+                    try:
+                        data_dict = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        return None
+                    return data_dict["miner_type"]
+                except Exception as e:
+                    print(str(e))
+                    pass
+
+
+
         return None
 
 
