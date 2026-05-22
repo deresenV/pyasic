@@ -1,1 +1,2 @@
-from .T21 import MSKMinerT21
+from .T21 import *
+from .S21 import *

@@ -20,7 +20,7 @@ from pyasic.miners.device.models import (
     S19jPro,
     S19i,
     S19jProPlus,
-    S19KPro
+    S19KPro, S19Pro, S19j, S19XP, S19ProPlus
 )
 class MSKMinerS19JPro(MSKMiner, S19jPro):
     pass
@@ -35,4 +35,19 @@ class MSKMinerS19JProPlus(MSKMiner, S19jProPlus):
     pass
 
 class MSKMinerS19KPro(MSKMiner, S19KPro):
+    pass
+
+class MSKMinerS19_126(MSKMiner, S19jPro):
+    pass
+
+class MSKMinerS19Pro(MSKMiner, S19Pro):
+    pass
+
+class MSKMinerS19j(MSKMiner, S19j):
+    pass
+
+class MSKMinerS19XP(MSKMiner, S19XP):
+    pass
+
+class MSKMinerS19ProPlus(MSKMiner, S19ProPlus):
     pass
