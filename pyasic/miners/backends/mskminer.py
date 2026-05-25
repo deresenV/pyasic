@@ -234,3 +234,9 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         except:
             pass
         return overheat
+
+    async def get_uptime(self) -> int | None:
+        uptime = await self.web.uptime()
+        if uptime:
+            return int(uptime)
+        return uptime
