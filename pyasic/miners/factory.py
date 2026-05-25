@@ -603,6 +603,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER S19 XP HYD.": VNishS19XPHydro,
         "ANTMINER S19J PRO": VNishS19jPro,
         "ANTMINER S19J PRO A": VNishS19jPro,
+        "ANTMINER S19J PRO-A": VNishS19jPro,
         "ANTMINER S19J PRO BB": VNishS19jPro,
         "ANTMINER S19A": VNishS19a,
         "ANTMINER S19 HYD.": VNishS19Hydro,
@@ -873,8 +874,8 @@ class MinerFactory:
             asyncio.create_task(self._get_miner_web(ip)),
             asyncio.create_task(self._get_miner_socket(ip)),
         ]
-
-        return await concurrent_get_first_result(tasks, lambda x: x is not None)
+        result = await concurrent_get_first_result(tasks, lambda x: x is not None)
+        return result
 
     async def _get_miner_web(self, ip: str) -> MinerTypes | None:
         urls = [f"http://{ip}/", f"https://{ip}/"]
