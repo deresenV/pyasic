@@ -177,3 +177,7 @@ class MSKMinerWebAPI(BaseWebAPI):
     async def is_overheat(self):
         overheat = await self.send_get_command("overheat/is_overheat")
         return overheat
+
+    async def uptime(self) -> str | None:
+        info_app = await self.info_app()
+        return info_app.get("running_time", None)
