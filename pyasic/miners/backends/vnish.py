@@ -349,3 +349,10 @@ class VNish(VNishFirmware, BMMiner):
             status = data.get("find_miner", False)
             return status
         return False
+
+    async def is_overheat(self) -> bool:
+        status = await self.web.status()
+        if status.get("miner_state", None) == "failure":
+            if "overheated" in status.get("description", ""):
+                return True
+        return False
