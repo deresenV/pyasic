@@ -226,3 +226,11 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
 
     async def get_hashboards(self) -> list[HashBoard]:
         return await self._get_hashboards()
+
+    async def is_overheat(self) -> bool:
+        overheat = False
+        try:
+            overheat = await self.web.is_overheat()
+        except:
+            pass
+        return overheat

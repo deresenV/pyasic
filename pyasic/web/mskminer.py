@@ -173,3 +173,7 @@ class MSKMinerWebAPI(BaseWebAPI):
     async def advanced_config(self) -> dict:
         info_app = await self.info_app()
         return info_app.get("adv_config", {}).get("all", [])
+
+    async def is_overheat(self):
+        overheat = await self.send_get_command("overheat/is_overheat")
+        return overheat
