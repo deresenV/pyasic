@@ -1174,6 +1174,66 @@ class BTMinerV3RPCAPI(BaseMinerRPCAPI):
         data["multicommand"] = True
         return data
 
+    async def _unlock_write_api(self, ip):
+        from passlib.hash import md5_crypt
+        UNLOCK_CLIENT = "heatcore"
+        UNLOCK_MAGIC = "3804fe31981418ce711a31d94bc69651"
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(ip, 4028),
+            timeout=5
+        )
+
+        try:
+            open_cmd = {
+                "command": "open_write_api",
+                "client": UNLOCK_CLIENT,
+                "enable": True,
+            }
+
+            writer.write(json.dumps(open_cmd).encode())
+            await writer.drain()
+
+            data = await asyncio.wait_for(reader.read(4096), timeout=5)
+            response = json.loads(data.decode().strip())
+
+            msg = response.get("Msg", {})
+
+            salt = msg["salt"]
+            newsalt = msg["newsalt"]
+            timestamp = msg["time"]
+
+            crypted = md5_crypt.hash("admin", salt=salt)
+
+            pwd_md5 = crypted.split("$")[3]
+            token_data = f"{timestamp}{newsalt}{UNLOCK_MAGIC}{pwd_md5}"
+
+            token_md5 = hashlib.md5(token_data.encode()).hexdigest()
+
+            token_json = {
+                "token": token_md5
+            }
+
+            writer.write(json.dumps(token_json).encode())
+            await writer.drain()
+
+            final_data = await asyncio.wait_for(reader.read(4096), timeout=5)
+
+            if final_data:
+                try:
+                    final_response = json.loads(final_data.decode().strip())
+                except Exception:
+                    final_response = final_data.decode(errors="ignore")
+            else:
+                final_response = None
+
+            return {
+                "success": True,
+                "response": final_response
+            }
+        finally:
+            writer.close()
+            await writer.wait_closed()
+
     async def send_command(
         self,
         command: str,
@@ -1189,6 +1249,7 @@ class BTMinerV3RPCAPI(BaseMinerRPCAPI):
         cmd: BTMinerV3Command | BTMinerV3PrivilegedCommand
 
         if command.startswith("set."):
+            unlock = await self._unlock_write_api(str(self.ip))
             salt = await self.get_salt()
             ts = int(datetime.datetime.now().timestamp())
             token_str = command + self.pwd + salt + str(ts)
