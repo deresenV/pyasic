@@ -281,6 +281,65 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
 
         data["multicommand"] = True
         return data
+    async def _unlock_write_api(self, ip):
+        from passlib.hash import md5_crypt
+        UNLOCK_CLIENT = "heatcore"
+        UNLOCK_MAGIC = "3804fe31981418ce711a31d94bc69651"
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(ip, 4028),
+            timeout=5
+        )
+
+        try:
+            open_cmd = {
+                "command": "open_write_api",
+                "client": UNLOCK_CLIENT,
+                "enable": True,
+            }
+
+            writer.write(json.dumps(open_cmd).encode())
+            await writer.drain()
+
+            data = await asyncio.wait_for(reader.read(4096), timeout=5)
+            response = json.loads(data.decode().strip())
+
+            msg = response.get("Msg", {})
+
+            salt = msg["salt"]
+            newsalt = msg["newsalt"]
+            timestamp = msg["time"]
+
+            crypted = md5_crypt.hash("admin", salt=salt)
+
+            pwd_md5 = crypted.split("$")[3]
+            token_data = f"{timestamp}{newsalt}{UNLOCK_MAGIC}{pwd_md5}"
+
+            token_md5 = hashlib.md5(token_data.encode()).hexdigest()
+
+            token_json = {
+                "token": token_md5
+            }
+
+            writer.write(json.dumps(token_json).encode())
+            await writer.drain()
+
+            final_data = await asyncio.wait_for(reader.read(4096), timeout=5)
+
+            if final_data:
+                try:
+                    final_response = json.loads(final_data.decode().strip())
+                except Exception:
+                    final_response = final_data.decode(errors="ignore")
+            else:
+                final_response = None
+
+            return {
+                "success": True,
+                "response": final_response
+            }
+        finally:
+            writer.close()
+            await writer.wait_closed()
 
     async def send_privileged_command(
         self,
@@ -290,21 +349,19 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
         **kwargs,
     ) -> dict:
         try:
+            await self._unlock_write_api(str(self.ip))
             return await self._send_privileged_command(
                 command=command, ignore_errors=ignore_errors, timeout=timeout, **kwargs
             )
         except APIError as e:
-            if not e.message == "can't access write cmd":
-                raise
-            # If we get here, we caught the specific error but didn't handle it
-            raise
-        # try:
-        #     await self.open_api()
-        # except Exception as e:
-        #     raise APIError("Failed to open whatsminer API.") from e
-        # return await self._send_privileged_command(
-        #     command=command, ignore_errors=ignore_errors, timeout=timeout, **kwargs
-        # )
+            pass
+        try:
+            await self.open_api()
+        except Exception as e:
+            raise APIError("Failed to open whatsminer API.") from e
+        return await self._send_privileged_command(
+            command=command, ignore_errors=ignore_errors, timeout=timeout, **kwargs
+        )
 
     async def _send_privileged_command(
         self,
