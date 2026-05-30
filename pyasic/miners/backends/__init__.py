@@ -36,3 +36,4 @@ from .mskminer import MSKMiner
 from .unknown import UnknownMiner
 from .vnish import VNish
 from .whatsminer import M2X, M3X, M5X, M6X, M7X
+from .aos import AosMiner

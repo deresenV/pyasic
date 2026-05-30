@@ -50,3 +50,6 @@ class LuxOSFirmware(BaseMiner):
 
 class MaraFirmware(BaseMiner):
     firmware = MinerFirmware.MARATHON
+
+class AosFirmware(StockFirmware):
+    firmware = MinerFirmware.AOS

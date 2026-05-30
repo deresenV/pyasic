@@ -72,6 +72,7 @@ class MinerTypes(enum.Enum):
     ELPHAPEX = 17
     MSKMINER = 18
     PITBIT = 19
+    AOS = 20
 
 
 MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
@@ -754,6 +755,10 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "DG1": ElphapexDG1,
         "DG1-Home": ElphapexDG1Home,
     },
+    MinerTypes.AOS: {
+        "ANTMINER T21": AosMinerT21
+    }
+
 }
 
 
@@ -838,7 +843,8 @@ class MinerFactory:
                 MinerTypes.HAMMER: self.get_miner_model_hammer,
                 MinerTypes.VOLCMINER: self.get_miner_model_volcminer,
                 MinerTypes.ELPHAPEX: self.get_miner_model_elphapex,
-                MinerTypes.MSKMINER: self.get_miner_model_mskminer
+                MinerTypes.MSKMINER: self.get_miner_model_mskminer,
+                MinerTypes.AOS: self.get_miner_model_antminer
             }
             version: str | None = None
             miner_version_fns = {
@@ -1042,6 +1048,8 @@ class MinerFactory:
     @staticmethod
     def _parse_socket_type(data: str) -> MinerTypes | None:
         upper_data = data.upper()
+        if "[AOS]" in upper_data:
+            return MinerTypes.AOS
         if "BOSMINER" in upper_data or "BOSER" in upper_data:
             return MinerTypes.BRAIINS_OS
         if "BTMINER" in upper_data or "BITMICRO" in upper_data:
@@ -1664,11 +1672,7 @@ class MinerFactory:
                         return None
                     return data_dict["miner_type"]
                 except Exception as e:
-                    print(str(e))
                     pass
-
-
-
         return None
 
 

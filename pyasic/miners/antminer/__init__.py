@@ -24,3 +24,4 @@ from .marathon import *
 from .mskminer import *
 from .vnish import *
 from .pitbit import *
+from .aos import *
