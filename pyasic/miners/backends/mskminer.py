@@ -240,3 +240,10 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         if uptime:
             return int(uptime)
         return uptime
+
+    async def overheat_out(self) -> bool:
+        try:
+            await self.web.overheat_stop()
+            return True
+        except:
+            return False

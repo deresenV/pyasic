@@ -132,12 +132,16 @@ class VNish(VNishFirmware, BMMiner):
         return False
 
     async def resume_mining(self) -> bool:
-        data = await self.web.resume_mining()
-        if data:
-            try:
-                return data["success"]
-            except KeyError:
-                pass
+        try:
+            data = await self.web.resume_mining()
+            if data:
+                try:
+                    return data["success"]
+                except KeyError:
+                    pass
+            return True
+        except:
+            pass
         return False
 
     async def reboot(self) -> bool:
@@ -355,4 +359,60 @@ class VNish(VNishFirmware, BMMiner):
         if status.get("miner_state", None) == "failure":
             if "overheated" in status.get("description", ""):
                 return True
+            summary = await self.web.summary()
+            if summary:
+                chains = summary.get("miner", {}).get("chains", [])
+                for chain in chains:
+                    if "overheated" in chain.get("status", {}).get("description", "").lower():
+                        return True
         return False
+
+    async def _format_set_chain_status(self):
+        v1_settings = await self.web.settings()
+        if v1_settings:
+            miner = v1_settings.get("miner", {})
+            overclock = miner.get("overclock", {})
+            preset = overclock.get("preset", None)
+            preset_switcher = overclock.get("preset_switcher", {})
+            globals_name = overclock.get("globals", {})
+            chains = overclock.get("chains", [])
+            response_body = {
+                "miner": {
+                    "overclock": {
+                        "preset": preset,
+                        "preset_switcher": preset_switcher,
+                        "globals": globals_name,
+                        "chains": chains
+                    }
+                }
+            }
+            return response_body
+        return None
+
+    async def _set_chain_status(self, disable: bool, chain_num: int):
+        settings = await self._format_set_chain_status()
+        if settings:
+            chains = settings["miner"]["overclock"]["chains"]
+            if len(chains) - 1 >= chain_num:
+                chains[chain_num]["disabled"] = disable
+
+            response = await self.web.post_settings(settings)
+            if response:
+                reboot = response.get("reboot_required", False)
+                if reboot:
+                    await self.web.reboot()
+                restart = response.get("restart_required", False)
+                if restart:
+                    try:
+                        await self.web.restart_vnish()
+                    except:
+                        pass
+            return True
+        return False
+
+
+    async def disable_chain(self, chain_num: int) -> bool:
+        return await self._set_chain_status(True, chain_num)
+
+    async def enable_chain(self, chain_num: int) -> bool:
+        return await self._set_chain_status(False, chain_num)
