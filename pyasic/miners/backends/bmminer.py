@@ -313,3 +313,9 @@ class BMMiner(StockFirmware):
             except LookupError:
                 pass
         return pools_data
+
+    async def overheat_out(self) -> bool:
+        try:
+            return await self.reboot()
+        except:
+            return False

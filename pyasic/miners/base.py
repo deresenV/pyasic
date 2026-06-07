@@ -122,6 +122,31 @@ class MinerProtocol(Protocol):
         """
         return False
 
+    async def disable_chain(self, chain_num: int) -> bool:
+        """Set disable chain status
+        Returns:
+            A boolean value of the success of set status.
+        """
+        return False
+
+    async def enable_chain(self, chain_num: int) -> bool:
+        """Set enable chain status
+        Returns:
+            A boolean value of the success of set status.
+        """
+        return False
+
+    async def overheat_out(self) -> bool:
+        """Output miner from overheat mode if miner is in overheat mode.
+
+        Returns:
+            A boolean value of the success of outputting miner from overheat mode.
+        """
+        return False
+
+    async def is_overheat(self) -> bool:
+        return False
+
     async def get_config(self) -> MinerConfig:
         # Not a data gathering function, since this is used for configuration
         """Get the mining configuration of the miner and return it as a [`MinerConfig`][pyasic.config.MinerConfig].
