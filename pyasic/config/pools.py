@@ -186,7 +186,7 @@ class Pool(MinerConfigValue):
     @classmethod
     def from_am_modern(cls, web_pool: dict) -> Pool:
         return cls(
-            url=web_pool["url"], user=web_pool["user"], password=web_pool["pass"]
+            url=web_pool.get("url", ""), user=web_pool.get("user", ""), password=web_pool.get("pass", "")
         )
 
     @classmethod
