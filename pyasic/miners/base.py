@@ -22,6 +22,7 @@ from pyasic.config import MinerConfig
 from pyasic.data import Fan, HashBoard, MinerData
 from pyasic.data.device import DeviceInfo
 from pyasic.data.error_codes import MinerErrorData
+from pyasic.data.network import NetworkConfig
 from pyasic.data.pools import PoolMetrics
 from pyasic.device.algorithm import AlgoHashRateType, MinerAlgoType
 from pyasic.device.algorithm.base import GenericAlgo
@@ -134,6 +135,9 @@ class MinerProtocol(Protocol):
         Returns:
             A boolean value of the success of set status.
         """
+        return False
+
+    async def set_network(self, config: NetworkConfig = NetworkConfig()) -> bool:
         return False
 
     async def overheat_out(self) -> bool:

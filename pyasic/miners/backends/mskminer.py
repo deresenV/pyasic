@@ -3,6 +3,7 @@ from http.client import responses
 from pyasic import APIError, MinerConfig
 from pyasic.config import PoolConfig, FanModeType, FanModeConfig, FanModeNormal
 from pyasic.data import HashBoard
+from pyasic.data.network import NetworkConfig
 from pyasic.device.algorithm import AlgoHashRateType
 from pyasic.miners.backends import BMMiner
 from pyasic.miners.data import (
@@ -234,6 +235,13 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         except:
             pass
         return overheat
+
+    async def set_network(self, net_config: NetworkConfig = NetworkConfig()):
+        try:
+            await self.web.send_command("network_conf", **net_config.as_am_msk())
+            return True
+        except:
+            return False
 
     async def get_uptime(self) -> int | None:
         uptime = await self.web.uptime()
