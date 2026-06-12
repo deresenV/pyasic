@@ -1256,7 +1256,7 @@ class BTMinerV3(StockFirmware):
     ) -> list[PoolMetrics]:
         if rpc_get_miner_status_summary is None:
             try:
-                rpc_get_miner_status_summary = await self.rpc.get_miner_status_summary()
+                rpc_get_miner_status_summary = await self.rpc.get_miner_status_pools()
             except APIError:
                 return []
         pools = []
@@ -1264,13 +1264,18 @@ class BTMinerV3(StockFirmware):
             return []
         msg_pools = rpc_get_miner_status_summary.get("msg", {}).get("pools", [])
         for idx, pool in enumerate(msg_pools):
+            url_str = pool.get("url")
+            try:
+                url = PoolUrl(scheme=url_str.split(":")[0], host=url_str.split(":")[1], port=url_str.split(":")[2])
+            except:
+                url = None
             pools.append(
                 PoolMetrics(
                     index=idx,
                     user=pool.get("account"),
                     alive=pool.get("status") == "alive",
                     active=pool.get("stratum-active"),
-                    url=pool.get("url"),
+                    url=url,
                 )
             )
         return pools
