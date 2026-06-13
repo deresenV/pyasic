@@ -978,7 +978,7 @@ class BTMinerV3(StockFirmware):
     async def fault_light_on(self) -> bool:
         try:
             data = await self.rpc.set_system_led(
-                leds=[{"color": "red", "period": 200, "duration": 100, "start": 0}]
+                leds=[{"color": "red", "period": 200, "duration": 1000, "start": 0}]
             )
         except APIError:
             return False
@@ -1098,6 +1098,12 @@ class BTMinerV3(StockFirmware):
         if isinstance(val, str):
             return val != "auto"
         return None
+
+    async def get_fault_light(self) -> bool:
+        flashing = await self._get_light_flashing()
+        if not flashing:
+            return False
+        return flashing
 
     async def _get_wattage_limit(
         self, rpc_get_miner_status_summary: dict | None = None
