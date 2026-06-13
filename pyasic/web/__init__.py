@@ -23,3 +23,4 @@ from .hammer import HammerWebAPI
 from .iceriver import IceRiverWebAPI
 from .innosilicon import InnosiliconWebAPI
 from .vnish import VNishWebAPI
+from .pitbit import PitBitWebAPI

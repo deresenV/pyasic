@@ -36,6 +36,11 @@ class AntminerModernWebAPI(BaseWebAPI):
             ip (str): IP address of the Antminer device.
         """
         super().__init__(ip)
+        self._get_blink_status = None
+        self._get_network_info = None
+        self._summary = None
+        self._get_system_info = None
+        self._get_miner_conf = None
         self.username: str = "root"
         self.pwd: str = settings.get("default_antminer_web_password", "root")
 
@@ -160,7 +165,9 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary containing the current configuration of the miner.
         """
-        return await self.send_command("get_miner_conf")
+        if not self._get_miner_conf:
+            self._get_miner_conf = await self.send_command("get_miner_conf")
+        return self._get_miner_conf
 
     async def set_miner_conf(self, conf: dict) -> dict:
         """Set the configuration for the miner.
@@ -200,7 +207,9 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary containing system information of the miner.
         """
-        return await self.send_command("get_system_info")
+        if not self._get_system_info:
+            self._get_system_info = await self.send_command("get_system_info")
+        return self._get_system_info
 
     async def get_network_info(self) -> dict:
         """Retrieve network configuration information from the miner.
@@ -208,7 +217,9 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary containing the network configuration of the miner.
         """
-        return await self.send_command("get_network_info")
+        if not self._get_network_info:
+            self._get_network_info = await self.send_command("get_network_info")
+        return self._get_network_info
 
     async def summary(self) -> dict:
         """Get a summary of the miner's status and performance.
@@ -216,7 +227,9 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A summary of the miner's current operational status.
         """
-        return await self.send_command("summary")
+        if not self._summary:
+            self._summary = await self.send_command("summary")
+        return self._summary
 
     async def get_blink_status(self) -> dict:
         """Check the status of the LED blinking on the miner.
@@ -224,7 +237,9 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary indicating whether the LED is currently blinking.
         """
-        return await self.send_command("get_blink_status")
+        if not self._get_blink_status:
+            self._get_blink_status = await self.send_command("get_blink_status")
+        return self._get_blink_status
 
     async def set_network_conf(
         self,

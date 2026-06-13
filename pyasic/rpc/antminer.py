@@ -2,10 +2,19 @@ from pyasic.rpc.bmminer import BMMinerRPCAPI
 
 
 class AntminerRPCAPI(BMMinerRPCAPI):
+    def __init__(self, ip: str, port: int = 4028, api_ver: str = "0.0.0"):
+        super().__init__(ip, port, api_ver)
+        self._stats = None
+        self._new_stats = None
+
     async def stats(self, new_api: bool = False) -> dict:
         if new_api:
-            return await self.send_command("stats", new_api=True)
-        return await super().stats()
+            if not self._new_stats:
+                self._new_stats = await self.send_command("stats", new_api=True)
+            return self._new_stats
+        if not self._stats:
+            self._stats = await super().stats()
+        return self._stats
 
     async def rate(self):
         return await self.send_command("rate", new_api=True)

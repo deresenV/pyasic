@@ -1,100 +1,30 @@
+import asyncio
 import re
+from typing import Callable, Any
 
 import httpx
-from _testcapi import awaitType
 
 from pyasic import settings
-from pyasic.miners.backends import AntminerModern
-import asyncio
-import logging
-from pathlib import Path
-
-from pyasic.config import MinerConfig, MiningModeConfig
-from pyasic.data import Fan, HashBoard, MinerErrorData
-from pyasic.data.error_codes import X19Error
-from pyasic.data.pools import PoolMetrics, PoolUrl
-from pyasic.device.algorithm import AlgoHashRateType
-from pyasic.errors import APIError
-from pyasic.miners.backends.bmminer import BMMiner
-from pyasic.miners.backends.cgminer import CGMiner
-from pyasic.miners.device.firmware import PitBitFirmware
-from pyasic.miners.data import (
-    DataFunction,
-    DataLocations,
-    DataOptions,
-    RPCAPICommand,
-    WebAPICommand,
-)
 from pyasic.rpc.antminer import AntminerRPCAPI
-from pyasic.ssh.antminer import AntminerModernSSH
-from pyasic.web.antminer import AntminerModernWebAPI, AntminerOldWebAPI
-
-ANTMINER_MODERN_DATA_LOC = DataLocations(
-    **{
-        str(DataOptions.SERIAL_NUMBER): DataFunction(
-            "_get_serial_number",
-            [WebAPICommand("web_get_system_info", "get_system_info")],
-        ),
-        str(DataOptions.MAC): DataFunction(
-            "_get_mac",
-            [WebAPICommand("web_get_system_info", "get_system_info")],
-        ),
-        str(DataOptions.API_VERSION): DataFunction(
-            "_get_api_ver",
-            [RPCAPICommand("rpc_version", "version")],
-        ),
-        str(DataOptions.FW_VERSION): DataFunction(
-            "_get_fw_ver",
-            [RPCAPICommand("rpc_version", "version")],
-        ),
-        str(DataOptions.HOSTNAME): DataFunction(
-            "_get_hostname",
-            [WebAPICommand("web_get_system_info", "get_system_info")],
-        ),
-        str(DataOptions.HASHRATE): DataFunction(
-            "_get_hashrate",
-            [RPCAPICommand("rpc_summary", "summary")],
-        ),
-        str(DataOptions.EXPECTED_HASHRATE): DataFunction(
-            "_get_expected_hashrate",
-            [RPCAPICommand("rpc_stats", "stats")],
-        ),
-        str(DataOptions.FANS): DataFunction(
-            "_get_fans",
-            [RPCAPICommand("rpc_stats", "stats")],
-        ),
-        str(DataOptions.ERRORS): DataFunction(
-            "_get_errors",
-            [WebAPICommand("web_summary", "summary")],
-        ),
-        str(DataOptions.FAULT_LIGHT): DataFunction(
-            "_get_fault_light",
-            [WebAPICommand("web_get_blink_status", "get_blink_status")],
-        ),
-        str(DataOptions.HASHBOARDS): DataFunction(
-            "_get_hashboards",
-            [],
-        ),
-        str(DataOptions.IS_MINING): DataFunction(
-            "_is_mining",
-            [WebAPICommand("web_get_conf", "get_miner_conf")],
-        ),
-        str(DataOptions.UPTIME): DataFunction(
-            "_get_uptime",
-            [RPCAPICommand("rpc_stats", "stats")],
-        ),
-        str(DataOptions.POOLS): DataFunction(
-            "_get_pools",
-            [RPCAPICommand("rpc_pools", "pools")],
-        ),
-    }
-)
-
+from pyasic.web.pitbit import PitBitWebAPI
+from pyasic.miners.backends import AntminerModern
+from pyasic.data import HashBoard, MinerErrorData
+from pyasic.data.error_codes import X19Error
+from pyasic.miners.device.firmware import PitBitFirmware
 
 class PitBitMiner(PitBitFirmware, AntminerModern):
+    _web_cls = PitBitWebAPI
+    web: PitBitWebAPI
+
+    _rpc_cls = AntminerRPCAPI
+    rpc: AntminerRPCAPI
+
     async def _change_mining_mode(self, mining_mode: int):
-        response = await self.web.set_miner_conf({"bitmain-work-mode": mining_mode, "pools": []})
-        return True
+        try:
+            await self.web.set_miner_conf({"bitmain-work-mode": mining_mode, "pools": []})
+            return True
+        except:
+            return False
 
     async def stop_mining(self) -> bool:
         return await self._change_mining_mode(1)
@@ -102,19 +32,19 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
     async def resume_mining(self) -> bool:
         return await self._change_mining_mode(0)
 
-
-    #todo Перенести в web класс
     async def miner_type(self):
-        return await self.web.send_command("miner_type")
-
-    async def system_info(self):
-        return await self.web.send_command("get_system_info")
+        return await self.web.miner_type()
 
     async def stats(self):
-        return await self.web.send_command("stats")
+        tasks = [
+            asyncio.create_task(self.web.stats()),
+            asyncio.create_task(self.rpc.stats(True)),
+        ]
+        result = await self._concurrent_get_first_result(tasks, lambda x: x is not None)
+        return result
 
     async def api_conf(self):
-        return await self.web.send_command("get_api_conf")
+        return await self.web.get_api_conf()
 
     async def serial_get(self):
         url = f"http://{self.ip}:{80}/cgi-bin_n/serial_get.cgi"
@@ -126,17 +56,41 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
         except httpx.HTTPError as e:
             return {"success": False, "message": f"HTTP error occurred: {str(e)}"}
 
-    async def get_uptime(self) -> int | None:
-        raw_json = await self.web.send_command("stats")
-        if raw_json:
+    async def _concurrent_get_first_result(self, tasks: list, verification_func: Callable) -> Any:
+        res = None
+        for fut in asyncio.as_completed(tasks):
+            res = await fut
+            if verification_func(res):
+                break
+        for t in tasks:
+            t.cancel()
             try:
-                uptime = raw_json.get("STATS", {})[0].get("elapsed", 0)
+                await t
+            except asyncio.CancelledError:
+                pass
+        return res
+
+    async def get_uptime(self) -> int | None:
+        stats = await self.stats()
+        #web
+        if len(stats) == 3:
+            try:
+                uptime = stats.get("STATS", {})[0].get("elapsed", 0)
                 return int(uptime)
             except: pass
+        #rpc
+        elif len(stats) == 2:
+            try:
+                uptime = stats.get("STATS", [{}, {}])[1].get("Elapsed", 0)
+                return int(uptime)
+            except:
+                pass
         return None
 
+
     async def get_wattage(self) -> int | None:
-        raw_json = await self.web.send_command("stats")
+        # In rpc stats no data about power wattage
+        raw_json = await self.web.stats()
         if raw_json:
             try:
                 power = raw_json.get("STATS", {})[0].get("power")
@@ -168,7 +122,6 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
             for error in errors_from_log:
                 errors.append(X19Error(error_message=f"{" ".join(value for value in error.values())}"))
         return errors
-
 
     async def get_hashboards(self) -> list[HashBoard]:
         hashboards = await super().get_hashboards()
