@@ -196,17 +196,7 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
 
     async def get_wattage_limit(self) -> int | None:
         response = await self.web.tune_v2_current()
-        try:
-            if not response:
-                return None
-            current_params = response.get('params')
-            if current_params:
-                if int(current_params.get("tune_type", 1)) == 0:
-                    current_profile = current_params.get("tune_profile", 0)
-                    return 2000 + int(current_profile)*100
-            return None
-        except:
-            return None
+        return response
 
     async def get_wattage(self) -> int | None:
         return await self.web.power()

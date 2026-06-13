@@ -29,6 +29,9 @@ from pyasic.web.base import BaseWebAPI
 class VNishWebAPI(BaseWebAPI):
     def __init__(self, ip: str) -> None:
         super().__init__(ip)
+        self._status = None
+        self._perf_summary = None
+        self._summary = None
         self.username = "admin"
         self.pwd = settings.get("default_vnish_web_password", "admin")
         self.token = None
@@ -147,10 +150,14 @@ class VNishWebAPI(BaseWebAPI):
         return await self.send_command("info")
 
     async def summary(self) -> dict:
-        return await self.send_command("summary")
+        if not self._summary:
+            self._summary =  await self.send_command("summary")
+        return self._summary
 
     async def perf_summary(self) -> dict:
-        return await self.send_command("perf-summary")
+        if not self._perf_summary:
+            self._perf_summary =  await self.send_command("perf-summary")
+        return self._perf_summary
 
     async def chips(self) -> dict:
         return await self.send_command("chips")
@@ -159,7 +166,9 @@ class VNishWebAPI(BaseWebAPI):
         return await self.send_command("layout")
 
     async def status(self) -> dict:
-        return await self.send_command("status")
+        if not self._status:
+            self._status = await self.send_command("status")
+        return self._status
 
     async def settings(self) -> dict:
         return await self.send_command("settings")

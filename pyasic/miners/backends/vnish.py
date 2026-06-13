@@ -307,13 +307,7 @@ class VNish(VNishFirmware, BMMiner):
                 web_settings = await self.web.settings()
             except:
                 web_settings = None
-            web_presets_dict = await self.web.autotune_presets()
-            try:
-                web_presets = (
-                web_presets_dict.get("presets", []) if web_presets_dict else []
-            )
-            except Exception as e:
-                web_presets = None
+            web_presets = None
 
             web_perf_summary = (await self.web.perf_summary()) or {}
         except APIError:
@@ -348,7 +342,7 @@ class VNish(VNishFirmware, BMMiner):
 
 
     async def get_fault_light(self) -> bool:
-        data = await self.web.send_command("status")
+        data = await self.web.status()
         if data:
             status = data.get("find_miner", False)
             return status

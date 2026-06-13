@@ -29,6 +29,7 @@ from pyasic.web.base import BaseWebAPI
 class MSKMinerWebAPI(BaseWebAPI):
     def __init__(self, ip: str) -> None:
         super().__init__(ip)
+        self._info_app = None
         self.username = "root"
         self.pwd = "root"
 
@@ -98,7 +99,9 @@ class MSKMinerWebAPI(BaseWebAPI):
         return await self.send_command("info_v1")
 
     async def info_app(self) -> dict:
-        return await self.send_get_command("info_app")
+        if not self._info_app:
+            self._info_app = await self.send_get_command("info_app")
+        return self._info_app
 
     #todo вынести логику в другие общие функции
     async def set_miner_conf(self, config: MinerConfig):
@@ -145,8 +148,13 @@ class MSKMinerWebAPI(BaseWebAPI):
         info_app = await self.info_app()
         return info_app.get("power", None)
 
-    async def tune_v2_current(self) -> dict | None:
-        return await self.send_get_command("tune/v2/current")
+    async def tune_v2_current(self) -> int:
+        miner_data = await self.info_app()
+        current = miner_data.get("tune_profile")
+        try:
+            return current.split()[0]
+        except:
+            return 0
 
     async def miner_pause(self) -> bool:
         try:
@@ -175,7 +183,9 @@ class MSKMinerWebAPI(BaseWebAPI):
         return info_app.get("adv_config", {}).get("all", [])
 
     async def is_overheat(self):
-        overheat = await self.send_get_command("overheat/is_overheat")
+        miner_data = await self.info_app()
+        overheat = miner_data.get("is_overheat", False)
+        # overheat = await self.send_get_command("overheat/is_overheat")
         return overheat
 
     async def uptime(self) -> str | None:

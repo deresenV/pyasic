@@ -233,6 +233,10 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
 
     def __init__(self, ip: str, port: int = 4028, api_ver: str = "0.0.0") -> None:
         super().__init__(ip, port, api_ver)
+        self._get_miner_info = None
+        self._devdetails = None
+        self._status = None
+        self._summary = None
         self.pwd: str = settings.get("default_whatsminer_rpc_password", "admin")
         self.token: TokenData | None = None
 
@@ -1091,7 +1095,9 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
             Summary status of the miner.
         </details>
         """
-        return await self.send_command("summary")
+        if not self._summary:
+            self._summary = await self.send_command("summary")
+        return self._summary
 
     async def pools(self) -> dict:
         """Get the pool status from the miner.
@@ -1135,7 +1141,9 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
             Data on all devices with their static details.
         </details>
         """
-        return await self.send_command("devdetails")
+        if not self._devdetails:
+            self._devdetails = await self.send_command("devdetails")
+        return self._devdetails
 
     async def get_psu(self) -> dict:
         """Get data on the PSU and power information.
@@ -1183,7 +1191,9 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
             BTMiner status and firmware version.
         </details>
         """
-        return await self.send_command("status")
+        if not self._status:
+            self._status = await self.send_command("status")
+        return self._status
 
     async def get_miner_info(self) -> dict:
         """Get general miner info.
@@ -1194,7 +1204,9 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
             General miner info.
         </details>
         """
-        return await self.send_command("get_miner_info", allow_warning=False)
+        if not self._get_miner_info:
+            self._get_miner_info = await self.send_command("get_miner_info", allow_warning=False)
+        return self._get_miner_info
 
     @api_min_version("2.0.1")
     async def get_error_code(self) -> dict:
@@ -1215,6 +1227,7 @@ class BTMinerV3RPCAPI(BaseMinerRPCAPI):
     def __init__(self, ip: str, port: int = 4433, api_ver: str = "0.0.0"):
         super().__init__(ip, port, api_ver=api_ver)
 
+        self.status_summary = None
         self.salt: str | None = None
         self.pwd: str = "super"
 
