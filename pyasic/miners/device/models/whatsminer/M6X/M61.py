@@ -39,8 +39,7 @@ class M61VK40(WhatsMinerMake):
 
 class M61VK70(WhatsMinerMake):
      raw_model = MinerModel.WHATSMINER.M61VK70
-
-     expected_chips = 192
+     expected_chips = 172
      expected_fans = 2
      expected_hashboards = 3
      algo = MinerAlgo.SHA256
