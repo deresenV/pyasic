@@ -942,6 +942,13 @@ class BTMinerV3(StockFirmware):
 
         return self.config
 
+    async def _get_fw_ver(self) -> str | None:
+        try:
+            fw = await self.rpc.get_device_info()
+            return fw.get("msg", {}).get("system", {}).get("fwversion")
+        except:
+            pass
+
     async def send_config(
         self, config: MinerConfig, user_suffix: str | None = None
     ) -> None:

@@ -245,3 +245,7 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
             return True
         except:
             return False
+
+    async def _get_fw_ver(self, rpc_version: dict | None = None) -> str | None:
+        info_app = await self.web.info_app()
+        return info_app.get("bild", None)

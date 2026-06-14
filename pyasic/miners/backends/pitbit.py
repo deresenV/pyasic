@@ -130,3 +130,12 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
             if hashboards_from_log:
                 return hashboards_from_log
         return hashboards
+
+    async def _get_fw_ver(self, rpc_version: dict | None = None) -> str | None:
+        miner_type = await self.web.miner_type()
+        fw_raw = miner_type.get("miner_type", "").split("(")
+        fw = fw_raw[1].replace(")", "")
+        return fw
+
+    async def get_fw_ver(self) -> str | None:
+        return await self._get_fw_ver()
