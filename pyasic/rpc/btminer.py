@@ -1230,6 +1230,11 @@ class BTMinerV3RPCAPI(BaseMinerRPCAPI):
         self.status_summary = None
         self.salt: str | None = None
         self.pwd: str = "super"
+        self._status_summary = None
+        self._status_edevs = None
+        self._miner_settings = None
+        self._device_info = None
+        self._status_pools = None
 
     async def multicommand(self, *commands: str, allow_warning: bool = True) -> dict:
         """Creates and sends multiple commands as one command to the miner.
@@ -1444,13 +1449,19 @@ If you are sure you want to use this command please use API.send_command("{comma
         return await self.send_command("get.system.setting")
 
     async def get_miner_status_summary(self) -> dict | None:
-        return await self.send_command("get.miner.status", parameters="summary")
+        if not self._status_summary:
+            self._status_summary = await self.send_command("get.miner.status", parameters="summary")
+        return self._status_summary
 
     async def get_miner_status_edevs(self) -> dict | None:
-        return await self.send_command("get.miner.status", parameters="edevs")
+        if not self._status_edevs:
+            self._status_edevs = await self.send_command("get.miner.status", parameters="edevs")
+        return self._status_edevs
 
     async def get_miner_status_pools(self) -> dict | None:
-        return await self.send_command("get.miner.status", parameters="pools")
+        if not self._status_pools:
+            self._status_pools = await self.send_command("get.miner.status", parameters="pools")
+        return self._status_pools
 
     async def get_miner_history(self) -> dict | None:
         data = await self.send_command(
@@ -1474,10 +1485,14 @@ If you are sure you want to use this command please use API.send_command("{comma
         return await self.send_command("get.psu.command")
 
     async def get_miner_setting(self) -> dict | None:
-        return await self.send_command("get.miner.setting")
+        if not self._miner_settings:
+            self._miner_settings = await self.send_command("get.miner.setting")
+        return self._miner_settings
 
     async def get_device_info(self) -> dict | None:
-        return await self.send_command("get.device.info")
+        if not self._device_info:
+            self._device_info = await self.send_command("get.device.info")
+        return self._device_info
 
     async def get_log_download(self) -> dict | None:
         return await self.send_command("get.log.download")
