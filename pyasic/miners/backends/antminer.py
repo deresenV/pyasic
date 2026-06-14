@@ -13,7 +13,6 @@
 #  See the License for the specific language governing permissions and         -
 #  limitations under the License.                                              -
 # ------------------------------------------------------------------------------
-import asyncio
 import logging
 from pathlib import Path
 import re
@@ -140,6 +139,33 @@ class AntminerModern(BMMiner):
         return logs
 
     async def get_hashboards(self) -> list[HashBoard]:
+        #rpc
+        try:
+            answer = []
+            data = await self.rpc.stats()
+            stats_raw = data.get("STATS", [{}, {}])
+            stats = stats_raw[1]
+            count_boards = int(stats.get("miner_count", 3))
+            for i in range(1,count_boards+1):
+                try:
+                    inlet_temp = min(map(int, stats.get(f"temp_pic{i}").split("-")))
+                    outlet_temp = max(map(int, stats.get(f"temp_pcb{i}").split("-")))
+                    chip_temp = max(map(int, stats.get(f"temp_chip{i}").split("-")))
+                    chain = HashBoard(
+                        slot=i-1,
+                        chips=stats.get(f"chain_acn{i}"),
+                        inlet_temp=inlet_temp,
+                        outlet_temp=outlet_temp,
+                        chip_temp=chip_temp,
+                        expected_chips=self.expected_chips,
+                    )
+                    answer.append(chain)
+                except:
+                    pass
+            return answer
+        except Exception as e:
+            pass
+        # web
         answer = []
         try:
             data = await self.web.send_command('stats')
@@ -440,7 +466,6 @@ class AntminerModern(BMMiner):
     ) -> bool | None:
         if self.light:
             return self.light
-
         if web_get_blink_status is None:
             try:
                 web_get_blink_status = await self.web.get_blink_status()
