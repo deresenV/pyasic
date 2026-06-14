@@ -148,13 +148,9 @@ class MSKMinerWebAPI(BaseWebAPI):
         info_app = await self.info_app()
         return info_app.get("power", None)
 
-    async def tune_v2_current(self) -> int:
-        miner_data = await self.info_app()
-        current = miner_data.get("tune_profile")
-        try:
-            return current.split()[0]
-        except:
-            return 0
+    async def tune_v2_current(self):
+        miner_data = await self.send_command("tune/v2/current")
+        return miner_data
 
     async def miner_pause(self) -> bool:
         try:

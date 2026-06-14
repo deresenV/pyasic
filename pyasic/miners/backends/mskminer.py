@@ -195,8 +195,13 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         return True
 
     async def get_wattage_limit(self) -> int | None:
-        response = await self.web.tune_v2_current()
-        return response
+        miner_data = await self.web.info_app()
+        current = miner_data.get("tune_profile")
+        try:
+            current_array = current.split()
+            return current_array[0] if current_array[1] =="W" else None
+        except:
+            return None
 
     async def get_wattage(self) -> int | None:
         return await self.web.power()
