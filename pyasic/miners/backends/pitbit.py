@@ -43,7 +43,7 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
         result = await self._concurrent_get_first_result(tasks, lambda x: x is not None)
         return result
 
-    async def api_conf(self):
+    async def get_api_conf(self):
         return await self.web.get_api_conf()
 
     async def serial_get(self):
@@ -139,3 +139,12 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
 
     async def get_fw_ver(self) -> str | None:
         return await self._get_fw_ver()
+
+    async def set_cloud_token(self, token: str):
+        current_api_settings = await self.get_api_conf()
+        current_api_settings["api-token"] = token
+        return await self.web.set_cloud_token(current_api_settings)
+
+    async def get_cloud_token(self) -> str | None:
+        current_api_settings = await self.get_api_conf()
+        return current_api_settings.get("api-token", None)

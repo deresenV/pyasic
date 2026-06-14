@@ -60,7 +60,7 @@ class MSKMinerWebAPI(BaseWebAPI):
                 warnings.warn(f"Could not authenticate with miner web: {self}")
             try:
                 resp = await client.post(
-                    f"http://{self.ip}:{self.port}/api/{command}", json=parameters
+                    f"http://{self.ip}:{self.port}/api/{command}", json=parameters, timeout=10
                 )
                 if not resp.status_code == 200:
                     if not ignore_errors:
@@ -197,4 +197,11 @@ class MSKMinerWebAPI(BaseWebAPI):
             await self.send_command("overheat/stop")
             return True
         except:
+            return False
+
+    async def set_cloud_token(self, token: str):
+        try:
+            response = await self.send_command("cloud_stat/connect", **{"token": token})
+            return response.get("success", False)
+        except Exception:
             return False

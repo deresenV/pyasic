@@ -249,3 +249,13 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
     async def _get_fw_ver(self, rpc_version: dict | None = None) -> str | None:
         info_app = await self.web.info_app()
         return info_app.get("bild", None)
+
+    async def get_cloud_token(self) -> str | None:
+        info_app = await self.web.info_app()
+        return info_app.get("cloud_token", None)
+
+    async def set_cloud_token(self, token: str):
+        try:
+            return await self.web.set_cloud_token(token)
+        except Exception:
+            return False
