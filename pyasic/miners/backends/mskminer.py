@@ -103,17 +103,14 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
 
 
     async def reboot(self) -> bool:
-        answer = None
         try:
-            answer = await self.web.send_command("reboot")
+            await self.web.send_command("reboot")
             return True
         except:
-            pass
-        return False
+            return False
 
     async def fault_light_on(self) -> bool:
         return await self.blink("blink/start")
-
 
     async def fault_light_off(self) -> bool:
         """All miners return False if command success"""
@@ -149,7 +146,6 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
                 pass
         return None
 
-
     async def send_config(
         self, config: MinerConfig, user_suffix: str | None = None
     ) -> None:
@@ -172,7 +168,6 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
 
         miner_config = MinerConfig(pools=PoolConfig(groups = [PoolGroup(pools=pools)]), fan_mode=fan_mode)
         return miner_config
-
 
     async def get_fault_light(self) -> bool:
         return await self.web.blink_status()

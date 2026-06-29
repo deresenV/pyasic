@@ -149,6 +149,11 @@ class MinerProtocol(Protocol):
         return False
 
     async def is_overheat(self) -> bool:
+        """Has miner overheat mode
+
+        Returns:
+            A boolean value of miner has overheat mode.
+        """
         return False
 
     async def get_config(self) -> MinerConfig:

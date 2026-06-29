@@ -44,7 +44,14 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
         return result
 
     async def get_api_conf(self):
-        return await self.web.get_api_conf()
+        try:
+            return await self.web.get_api_conf()
+        except:
+            return {
+                "api-remote-ctrl": True,
+                "api-token": "",
+                "api-url": "api.pitbit.online"
+            }
 
     async def serial_get(self):
         url = f"http://{self.ip}:{80}/cgi-bin_n/serial_get.cgi"
