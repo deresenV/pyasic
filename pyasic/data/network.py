@@ -12,6 +12,16 @@ class NetType(str, Enum):
             "nettype": self.value
         }
 
+    def as_am_modern(self):
+        if self.value == NetType.static.value:
+            return {
+                "ipPro": 1
+            }
+        elif self.value == NetType.dynamic.value:
+            return {
+                "ipPro": 1
+            }
+
 class HostName(str, Enum):
     antminer = "Antminer"
 
@@ -19,6 +29,11 @@ class HostName(str, Enum):
     def as_am_msk(self):
         return {
             "hostname": self.value
+        }
+
+    def as_am_modern(self):
+        return {
+            "ipHost": self.value
         }
 
 class NetworkConfig(BaseModel):
@@ -41,4 +56,14 @@ class NetworkConfig(BaseModel):
             "ip_address": self.ip,
             "netmask": self.net_mask,
             **self.nettype.as_am_msk()
+        }
+
+    def as_am_modern_dhcp(self):
+        return {
+            **self.host_name.as_am_modern(),
+            **self.nettype.as_am_modern(),
+            "ipAddress": self.ip,
+            "ipSub": self.net_mask,
+            "ipGateway": self.gateway,
+            "ipDns": self.dns
         }

@@ -20,6 +20,7 @@ import re
 from pyasic.config import MinerConfig, MiningModeConfig
 from pyasic.data import Fan, HashBoard
 from pyasic.data.error_codes import X19Error
+from pyasic.data.network import NetworkConfig
 from pyasic.data.pools import PoolMetrics, PoolUrl
 from pyasic.device.algorithm import AlgoHashRateType
 from pyasic.errors import APIError
@@ -518,24 +519,12 @@ class AntminerModern(BMMiner):
                 pass
         return None
 
-    async def set_static_ip(
-        self,
-        ip: str,
-        dns: str,
-        gateway: str,
-        subnet_mask: str = "255.255.255.0",
-        hostname: str | None = None,
-    ):
-        if not hostname:
-            hostname = await self.get_hostname() or ""
+    async def set_network(self, config: NetworkConfig = NetworkConfig()) -> bool:
+        cfg = config.as_am_modern()
         await self.web.set_network_conf(
-            ip=ip,
-            dns=dns,
-            gateway=gateway,
-            subnet_mask=subnet_mask,
-            hostname=hostname,
-            protocol=2,
+            cfg
         )
+        return True
 
     async def set_dhcp(self, hostname: str | None = None):
         if not hostname:

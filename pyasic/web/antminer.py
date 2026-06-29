@@ -243,12 +243,7 @@ class AntminerModernWebAPI(BaseWebAPI):
 
     async def set_network_conf(
         self,
-        ip: str,
-        dns: str,
-        gateway: str,
-        subnet_mask: str,
-        hostname: str,
-        protocol: int,
+        network_config: dict
     ) -> dict:
         """Set the network configuration of the miner.
 
@@ -265,12 +260,7 @@ class AntminerModernWebAPI(BaseWebAPI):
         """
         return await self.send_command(
             "set_network_conf",
-            ipAddress=ip,
-            ipDns=dns,
-            ipGateway=gateway,
-            ipHost=hostname,
-            ipPro=protocol,
-            ipSub=subnet_mask,
+            **network_config
         )
 
 
