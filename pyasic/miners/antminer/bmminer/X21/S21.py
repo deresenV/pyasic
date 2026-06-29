@@ -26,12 +26,7 @@ from pyasic.miners.device.models import (
 
 
 class BMMinerS21(AntminerModern, S21):
-    async def reboot(self) -> bool:
-        try:
-            await self.web.send_command('reboot')
-            return True
-        except:
-            return False
+    pass
 
 
 class BMMinerS21Plus(AntminerModern, S21Plus):

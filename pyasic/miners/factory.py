@@ -31,6 +31,7 @@ from pyasic import settings
 from pyasic.logger import logger
 from pyasic.miners.antminer import *
 from pyasic.miners.antminer.mskminer import *
+from pyasic.miners.antminer.vnish.X21.S21 import VNishS21XP
 from pyasic.miners.auradine import *
 from pyasic.miners.avalonminer import *
 from pyasic.miners.backends import *
@@ -121,6 +122,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER S19J PRO_I": PitBitMinerS19jPro,
         "ANTMINER S19J+": BMMinerS19jPlus,
         "ANTMINER S19J PRO+": BMMinerS19jProPlus,
+        "ANTMINER S19J PRO+_I": PitBitMinerS19jProPlus,
         "BHB42XXXX": BMMinerS19jProPlus,
         "ANTMINER S19 XP": BMMinerS19XP,
         "ANTMINER S19 XP_I": PitBitMinerS19XP,
@@ -616,6 +618,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER T19": VNishT19,
         "ANTMINER T21": VNishT21,
         "ANTMINER S21": VNishS21,
+        "ANTMINER S21 XP": VNishS21XP,
         "ANTMINER S21+": VNishS21Plus,
         "ANTMINER S21+ HYD.": VNishS21PlusHydro,
         "ANTMINER S21 PRO": VNishS21Pro,

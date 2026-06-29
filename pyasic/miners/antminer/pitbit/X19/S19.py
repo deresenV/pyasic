@@ -1,7 +1,5 @@
-from pyasic.device.algorithm import AlgoHashRateType
-from pyasic.miners.backends.antminer import AntminerModernWebAPI
 from pyasic.miners.backends.pitbit import PitBitMiner
-from pyasic.miners.device.models import S19jXP, S19, S19j, S19XP, S19KPro, S19jPro
+from pyasic.miners.device.models import S19jXP, S19, S19j, S19XP, S19KPro, S19jPro, S19jProPlus
 
 
 class PitBitMinerS19(PitBitMiner, S19):
@@ -22,4 +20,7 @@ class PitBitMinerS19KPro(PitBitMiner, S19KPro):
 
 
 class PitBitMinerS19jPro(PitBitMiner, S19jPro):
+    pass
+
+class PitBitMinerS19jProPlus(PitBitMiner, S19jProPlus):
     pass
