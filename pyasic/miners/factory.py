@@ -74,6 +74,7 @@ class MinerTypes(enum.Enum):
     MSKMINER = 18
     PITBIT = 19
     AOS = 20
+    CHIM = 21
 
 
 MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
@@ -802,6 +803,9 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER S21 PRO": AosMinerS21Pro,
         "ANTMINER S21 HYD.": AosMinerS21Hydro,
         "ANTMINER S21 XP": AosMinerS21XP,
+    },
+    MinerTypes.CHIM: {
+        "ANTMINER L7": ChimMiningL7
     }
 
 }
@@ -889,7 +893,8 @@ class MinerFactory:
                 MinerTypes.VOLCMINER: self.get_miner_model_volcminer,
                 MinerTypes.ELPHAPEX: self.get_miner_model_elphapex,
                 MinerTypes.MSKMINER: self.get_miner_model_mskminer,
-                MinerTypes.AOS: self.get_miner_model_antminer
+                MinerTypes.AOS: self.get_miner_model_antminer,
+                MinerTypes.CHIM: self.get_miner_model_antminer
             }
             version: str | None = None
             miner_version_fns = {
@@ -926,6 +931,12 @@ class MinerFactory:
             asyncio.create_task(self._get_miner_socket(ip)),
         ]
         result = await concurrent_get_first_result(tasks, lambda x: x is not None)
+        if result == MinerTypes.ANTMINER:
+            auth = httpx.DigestAuth("root", "root")
+            res = await self.send_web_command(ip, "/partnerLink.json", auth=auth)
+            if res is not None:
+                if res.get("title", "").lower() == "chim-mining":
+                    return MinerTypes.CHIM
         return result
 
     async def _get_miner_web(self, ip: str) -> MinerTypes | None:
@@ -948,6 +959,9 @@ class MinerFactory:
                     res = await self.send_web_command(ip, "/kaonsu/v1/brief", auth=auth)
                     if res is not None:
                         mtype = MinerTypes.MARATHON
+                    res2 = await self.send_web_command(ip, "/partnerLink.json", auth=auth)
+                    if res2 is not None:
+                        mtype = MinerTypes.CHIM
                 if mtype == MinerTypes.HAMMER:
                     hammer_model = await self.get_miner_model_hammer(ip)
                     if hammer_model is None:

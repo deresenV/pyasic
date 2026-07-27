@@ -53,3 +53,6 @@ class MaraFirmware(BaseMiner):
 
 class AosFirmware(StockFirmware):
     firmware = MinerFirmware.AOS
+
+class ChimFirmware(StockFirmware):
+    firmware = MinerFirmware.CHIM

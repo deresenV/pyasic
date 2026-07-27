@@ -28,6 +28,7 @@ class MinerFirmware(str, Enum):
     MSK = "MSKMiner"
     PITBIT = "PitBit"
     AOS = "AoS"
+    CHIM = "Chim Mining"
 
     def __str__(self):
         return self.value
