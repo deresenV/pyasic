@@ -1,9 +1,9 @@
-from pyasic.miners.backends import BMMiner
+from pyasic.miners.backends import AntminerModern
 from pyasic.miners.device.firmware import AosFirmware
 from pyasic.web.aos import AosWebApi
 
 
-class AosMiner(AosFirmware, BMMiner):
+class AosMiner(AosFirmware, AntminerModern):
     web: AosWebApi
     _web_cls = AosWebApi
 
