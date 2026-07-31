@@ -38,7 +38,6 @@ class BTMiner(StockFirmware):
 
         def get_new(v: str | None):
             if v is None:
-                print("v2")
                 return BTMinerV2
             try:
                 semantic = semver.Version(
@@ -47,10 +46,8 @@ class BTMiner(StockFirmware):
                     patch=int(v[6:8]),
                 )
             except ValueError:
-                print("v2")
                 return BTMinerV2
             if semantic > semver.Version(major=2024, minor=11, patch=0):
-                print("v3")
                 return BTMinerV3
             return BTMinerV2
 
