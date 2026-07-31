@@ -38,6 +38,7 @@ class BTMiner(StockFirmware):
 
         def get_new(v: str | None):
             if v is None:
+                print("v2")
                 return BTMinerV2
             try:
                 semantic = semver.Version(
@@ -46,8 +47,10 @@ class BTMiner(StockFirmware):
                     patch=int(v[6:8]),
                 )
             except ValueError:
+                print("v2")
                 return BTMinerV2
             if semantic > semver.Version(major=2024, minor=11, patch=0):
+                print("v3")
                 return BTMinerV3
             return BTMinerV2
 
@@ -985,7 +988,7 @@ class BTMinerV3(StockFirmware):
     async def fault_light_on(self) -> bool:
         try:
             data = await self.rpc.set_system_led(
-                leds=[{"color": "red", "period": 200, "duration": 1000, "start": 0}]
+                leds=[{"color": "red", "period": 200, "duration": 100, "start": 0}]
             )
         except APIError:
             return False
