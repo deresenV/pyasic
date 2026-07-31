@@ -1109,12 +1109,6 @@ class BTMinerV3(StockFirmware):
             return val != "auto"
         return None
 
-    async def get_fault_light(self) -> bool:
-        flashing = await self._get_light_flashing()
-        if not flashing:
-            return False
-        return flashing
-
     async def _get_wattage_limit(
         self, rpc_get_miner_status_summary: dict | None = None
     ) -> int | None:
