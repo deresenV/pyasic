@@ -1391,3 +1391,9 @@ class BTMinerV3(StockFirmware):
             .get("summary", {})
             .get("environment-temperature")
         )
+
+    async def get_fault_light(self) -> bool:
+        result = await self._get_light_flashing()
+        if result:
+            return result
+        return False
