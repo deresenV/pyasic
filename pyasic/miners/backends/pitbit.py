@@ -21,7 +21,12 @@ class PitBitMiner(PitBitFirmware, AntminerModern):
 
     async def _change_mining_mode(self, mining_mode: int):
         try:
-            await self.web.set_miner_conf({"bitmain-work-mode": mining_mode, "pools": []})
+            try:
+                config = await self.get_config()
+                pools = config.as_am_modern().get("pools", [])
+            except:
+                pools = []
+            await self.web.set_miner_conf({"bitmain-work-mode": mining_mode, "pools": pools})
             return True
         except:
             return False
