@@ -341,6 +341,8 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
                 "success": True,
                 "response": final_response
             }
+        except:
+            pass
         finally:
             writer.close()
             await writer.wait_closed()
