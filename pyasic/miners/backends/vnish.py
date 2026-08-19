@@ -317,7 +317,10 @@ class VNish(VNishFirmware, BMMiner):
         self.config = MinerConfig.from_vnish(
             web_settings, web_presets, web_perf_summary
         )
-        return self.config
+        try:
+            return self.config
+        except:
+            return MinerConfig()
 
     async def set_power_limit(self, wattage: int) -> bool:
         new_wattage = wattage

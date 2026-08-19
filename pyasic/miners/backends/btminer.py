@@ -309,7 +309,10 @@ class BTMinerV2(StockFirmware):
 
             cfg.mining_mode = MiningModeConfig.power_tuning(power=power_lim)
             self.config = cfg
-            return self.config
+            try:
+                return self.config
+            except:
+                return MinerConfig()
 
         cfg.mining_mode = MiningModeConfig.normal()
         return cfg
