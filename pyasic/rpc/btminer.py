@@ -355,7 +355,12 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
         **kwargs,
     ) -> dict:
         try:
-            await self._unlock_write_api(str(self.ip))
+            try:
+                await self._unlock_write_api(str(self.ip))
+            except:
+                logging.warning(
+                    f"{self} - ([Hidden] Send Bytes) - open api timeout"
+                )
             return await self._send_privileged_command(
                 command=command, ignore_errors=ignore_errors, timeout=timeout, **kwargs
             )
@@ -1326,7 +1331,12 @@ class BTMinerV3RPCAPI(BaseMinerRPCAPI):
         cmd: BTMinerV3Command | BTMinerV3PrivilegedCommand
 
         if command.startswith("set."):
-            unlock = await self._unlock_write_api(str(self.ip))
+            try:
+                await self._unlock_write_api(str(self.ip))
+            except:
+                logging.warning(
+                    f"{self} - ([Hidden] Send Bytes) - open api timeout"
+                )
             salt = await self.get_salt()
             ts = int(datetime.datetime.now().timestamp())
             token_str = command + self.pwd + salt + str(ts)
