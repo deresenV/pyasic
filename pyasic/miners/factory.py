@@ -805,7 +805,8 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER S21 XP": AosMinerS21XP,
     },
     MinerTypes.CHIM: {
-        "ANTMINER L7": ChimMiningL7
+        "ANTMINER L7": ChimMiningL7,
+        "ANTMINER L7_I": ChimMiningL7,
     }
 
 }
