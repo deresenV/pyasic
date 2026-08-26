@@ -4,7 +4,7 @@ from typing import Any
 import warnings
 import httpx
 
-from pyasic import APIError
+from pyasic import APIError, settings
 from pyasic.web.base import BaseWebAPI
 
 
@@ -43,7 +43,7 @@ class BTMinerWebAPI(BaseWebAPI):
             privileged: bool = False,
             **parameters: Any,
             ):
-        async with httpx.AsyncClient(verify=False, follow_redirects=True) as client:
+        async with httpx.AsyncClient(verify=False, follow_redirects=True, transport=settings.transport()) as client:
             try:
                 # auth
                 await client.post(
