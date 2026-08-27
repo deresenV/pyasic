@@ -19,3 +19,7 @@ from pyasic.miners.device.models import L7
 
 class BMMinerL7(AntminerModern, L7):
     supports_shutdown = False
+
+    async def get_logs(self) -> str:
+        #todo
+        return ""
