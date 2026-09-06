@@ -413,3 +413,43 @@ class VNish(VNishFirmware, BMMiner):
 
     async def enable_chain(self, chain_num: int) -> bool:
         return await self._set_chain_status(False, chain_num)
+
+    async def get_hashrate_preset(self):
+        try:
+            perf_summary = await self.web.perf_summary()
+            pretty = perf_summary.get("current_preset", {}).get("pretty", "").split()
+            preset = " ".join(pretty[-2:])
+            if preset.lower() == "disabled":
+                return None
+            return preset
+        except Exception as e:
+            return None
+
+    async def set_hashrate_preset(self, preset: int):
+        new_wattage = None
+        presets = await self.web.autotune_presets()
+        for p in presets:
+            try:
+                if int(p.get("pretty").split()[-2]) == int(preset):
+                    new_wattage = int(p.get("name", 0))
+                    break
+            except Exception as e:
+                pass
+        try:
+            if new_wattage is None:
+                return False
+            await self.web.set_power_limit(new_wattage)
+            updated_settings = await self.web.settings()
+        except APIError:
+            raise
+        except Exception as e:
+            logging.warning(f"{self} - Failed to set power limit: {e}")
+            return False
+        if int(updated_settings["miner"]["overclock"]["preset"]) == new_wattage:
+            try:
+                await self.web.restart_vnish()
+            except:
+                pass
+            return True
+        else:
+            return False

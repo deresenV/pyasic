@@ -186,7 +186,7 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
             "profile_id": power_id,
             "profile_type": "power",
             "set_preset_without_tune": True,
-            "tune_eff": False
+            "tune_eff": True
         }
         response = await self.web.send_command("tune/v3/apply", False, True,False, **payload)
         return True
@@ -260,4 +260,34 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         try:
             return await self.web.set_cloud_token(token)
         except Exception:
+            return False
+
+    async def get_hashrate_preset(self):
+        try:
+            preset =  (await self.web.info_app())["tune_profile"]
+            if " W" in preset:
+                return None
+            return preset
+        except Exception as e:
+            return None
+
+
+    async def set_hashrate_preset(self, preset: int) -> bool:
+        try:
+            info_app = await self.web.info_app()
+            tune_type = info_app.get("tune_type", {})
+            tune_id_start = tune_type.get("tuneHashrateStartProfile", None)
+            hashrate_tune_start = tune_type.get("tuneHashrateFrom", None)
+            if tune_id_start and hashrate_tune_start:
+                profile_id = int(tune_id_start) + (int(preset)- int(hashrate_tune_start))//100
+                payload = {
+                    "profile_id": profile_id,
+                    "profile_type": "hashrate",
+                    "set_preset_without_tune": True,
+                    "tune_eff": True
+                }
+                response = await self.web.send_command("tune/v3/apply", False, True,False, **payload)
+                return True
+            return False
+        except:
             return False
