@@ -120,6 +120,7 @@ MINER_CLASSES: dict[MinerTypes, dict[str | None, Any]] = {
         "ANTMINER S19J88NOPIC": BMMinerS19jNoPIC,
         "ANTMINER S19PRO+": BMMinerS19ProPlus,
         "ANTMINER S19J PRO": BMMinerS19jPro,
+        "ANTMINER BHB42XXX": BMMinerS19jPro,
         "ANTMINER S19J PRO_I": PitBitMinerS19jPro,
         "ANTMINER S19J+": BMMinerS19jPlus,
         "ANTMINER S19J PRO+": BMMinerS19jProPlus,
