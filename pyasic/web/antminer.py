@@ -144,7 +144,7 @@ class AntminerModernWebAPI(BaseWebAPI):
 
 
     async def get_logs(self) -> str:
-        range_size = 10240
+        range_size = 3000
 
         url = f"http://{self.ip}:{self.port}/cgi-bin/log.cgi"
         auth = httpx.DigestAuth(self.username, self.pwd)
