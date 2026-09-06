@@ -121,11 +121,15 @@ class AntminerModern(BMMiner):
         if data:
             try:
                 hashrate = data["SUMMARY"][0]["rate_5s"]
+                try:
+                    unit = self.algo.unit.from_str((data["SUMMARY"][0]["rate_unit"]).replace("/s", ""))
+                except:
+                    unit = self.algo.unit.GH
                 return self.algo.hashrate(
                     rate=float(hashrate),
-                    unit=self.algo.unit.GH,
+                    unit=unit,
                 ).into(
-                    self.algo.unit.default
+                    unit
                 )
             except (LookupError, ValueError, TypeError):
                 pass

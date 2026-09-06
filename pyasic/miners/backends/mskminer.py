@@ -82,11 +82,13 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
                 pass
         if rpc_stats is not None:
             try:
+                info_app = await self.web.info_app()
+                unit = self.algo.unit.from_str(info_app.get("rate_unit", "GH/s").replace("/s", ""))
                 return self.algo.hashrate(
                     rate=float(rpc_stats["STATS"][1]["GHS 5s"]),
-                    unit=self.algo.unit.GH,  # type: ignore[attr-defined]
+                    unit=unit,  # type: ignore[attr-defined]
                 ).into(
-                    self.algo.unit.default  # type: ignore[attr-defined]
+                    unit  # type: ignore[attr-defined]
                 )
             except (LookupError, ValueError, TypeError):
                 pass
