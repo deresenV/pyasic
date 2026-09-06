@@ -1272,7 +1272,10 @@ class BTMinerV3(StockFirmware):
         pools = []
         if rpc_get_miner_status_summary is None:
             return []
-        msg_pools = rpc_get_miner_status_summary.get("msg", {}).get("pools", [])
+        try:
+            msg_pools = rpc_get_miner_status_summary.get("msg", {}).get("pools", [])
+        except:
+            return []
         for idx, pool in enumerate(msg_pools):
             url_str = pool.get("url")
             try:
