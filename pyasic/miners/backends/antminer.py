@@ -14,6 +14,7 @@
 #  limitations under the License.                                              -
 # ------------------------------------------------------------------------------
 import logging
+from datetime import datetime
 from pathlib import Path
 import re
 
@@ -375,6 +376,21 @@ class AntminerModern(BMMiner):
                 pass
 
         errors = []
+        warning = await self.web.warning()
+        if warning:
+            for problem in warning:
+                code = 1
+                timestamp = problem.get("timestamp", None)
+                msg = problem.get("suggestion", "Unkown error")
+                if timestamp:
+                    try:
+                        dt = datetime.strptime(timestamp, "%Y%m%d%H%M%S")
+                        msg += f" {dt}"
+                    except ValueError:
+                        msg += " (invalid timestamp)"
+                errors.append(X19Error(error_code=code, error_message=msg))
+
+
         if web_summary is not None:
             try:
                 for item in web_summary["SUMMARY"][0]["status"]:

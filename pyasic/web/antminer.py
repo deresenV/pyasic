@@ -262,7 +262,14 @@ class AntminerModernWebAPI(BaseWebAPI):
             "set_network_conf",
             **network_config
         )
-
+    async def warning(self) -> list:
+        try:
+            warning = await self.send_command("warning")
+            if warning:
+                return warning.get("WARNING", [])
+            return []
+        except:
+            return []
 
 class AntminerOldWebAPI(BaseWebAPI):
     def __init__(self, ip: str) -> None:
@@ -441,4 +448,3 @@ class AntminerOldWebAPI(BaseWebAPI):
             filename=file.name,
             keep_settings=keep_settings,
         )
-
