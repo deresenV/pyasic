@@ -299,6 +299,12 @@ class VNish(VNishFirmware, BMMiner):
                 if state == "failure":
                     errors.append(VnishError(error_message=description))
 
+            miner_status = web_summary.get("miner", {}).get("miner_status", {})
+            if miner_status.get("miner_state", "mining") == "failure":
+                msg = miner_status.get("description", "error")
+                status_code = int(miner_status.get("failure_code", 0))
+                errors.append(VnishError(error_code=status_code,error_message=msg))
+
         return errors
 
     async def get_config(self) -> MinerConfig:
