@@ -1,8 +1,8 @@
-from http.client import responses
+import datetime
 import re
 
 from pyasic import APIError, MinerConfig
-from pyasic.config import PoolConfig, FanModeType, FanModeConfig, FanModeNormal
+from pyasic.config import PoolConfig, FanModeConfig, FanModeNormal
 from pyasic.data import HashBoard, MinerErrorData
 from pyasic.data.network import NetworkConfig
 from pyasic.device.algorithm import AlgoHashRateType
@@ -345,9 +345,25 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
         pattern = re.compile(
             r'^(?P<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(?P<msg>.+)$'
         )
-        errors = {"DNS FAIL", "FEE IS BLOCKED!", "All pools are dead"}
+        errors = {
+            "DNS FAIL", "FEE IS BLOCKED!",
+                  "All pools are dead",
+                  "Fans statuses"
+        }
         errors_from_log = await self._parse_pattern_logs(target_patterns=errors,
                                                          pattern=pattern)
-        legacy_errors.extend(errors_from_log)
+        for error in errors_from_log:
+            from pyasic.data import X19Error
+            msg = error.get("msg", "")
+            time_str = error.get("time")
+            time_value = datetime.datetime.fromisoformat(time_str)
+            if time_value.tzinfo is None:
+                time_value = time_value.replace(tzinfo=datetime.timezone.utc)
+            if time_value:
+                date_now = datetime.datetime.now(datetime.timezone.utc)
+                diff = date_now - time_value
+                if diff <= datetime.timedelta(hours=1):
+                    legacy_errors.append(X19Error(error_message=f"{msg}"))
+
         return legacy_errors
 
