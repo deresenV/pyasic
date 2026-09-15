@@ -1,8 +1,9 @@
 from http.client import responses
+import re
 
 from pyasic import APIError, MinerConfig
 from pyasic.config import PoolConfig, FanModeType, FanModeConfig, FanModeNormal
-from pyasic.data import HashBoard
+from pyasic.data import HashBoard, MinerErrorData
 from pyasic.data.network import NetworkConfig
 from pyasic.device.algorithm import AlgoHashRateType
 from pyasic.miners.backends import BMMiner
@@ -291,3 +292,62 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
             return False
         except:
             return False
+
+    async def _parse_pattern_logs(self, target_patterns: set | None = None, pattern=None) -> list:
+        raw_log = await self.get_logs()
+        if not raw_log:
+            return []
+        miner_logs = [line.strip() for line in raw_log.splitlines() if line.strip()]
+
+        if not pattern:
+            pattern = re.compile(
+                r'level=(?P<level>\w+)\s+'
+                r'(?P<pid>\d+)\s+'
+                r'(?:chain=(?P<chain>\d+)\s*)?'
+                r'(?:error="(?P<error>[^"]+)"\s*)?'
+                r'msg="(?P<msg>[^"]+)"'
+            )
+
+        seen_signatures = set()
+        found_pattern_logs = []
+        miner_logs = miner_logs[-100:]
+        for log in miner_logs[::-1]:
+            match = pattern.search(log)
+            if match:
+                data = match.groupdict()
+                if target_patterns:
+                    all_values_text = " ".join(str(v) for v in data.values() if v is not None).lower()
+                    if not any(err.lower() in all_values_text for err in target_patterns):
+                        continue
+
+                sig_list = []
+                for key, value in data.items():
+                    if key.lower() not in ['pid', 'time']:
+                        sig_list.append(value)
+
+                signature = tuple(sig_list)
+
+                if signature not in seen_signatures:
+                    found_pattern_logs.append(data)
+                    seen_signatures.add(signature)
+
+        return found_pattern_logs
+
+    async def get_logs(self) -> str:
+        logs = await self.web.get_logs()
+        if logs is None:
+            return ""
+        return logs
+
+
+    async def get_errors(self) -> list[MinerErrorData]:
+        legacy_errors = await super().get_errors()
+        pattern = re.compile(
+            r'^(?P<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(?P<msg>.+)$'
+        )
+        errors = {"DNS FAIL", "FEE IS BLOCKED!", "All pools are dead"}
+        errors_from_log = await self._parse_pattern_logs(target_patterns=errors,
+                                                         pattern=pattern)
+        legacy_errors.extend(errors_from_log)
+        return legacy_errors
+

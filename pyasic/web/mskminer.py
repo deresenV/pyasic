@@ -30,6 +30,7 @@ class MSKMinerWebAPI(BaseWebAPI):
     def __init__(self, ip: str) -> None:
         super().__init__(ip)
         self._info_app = None
+        self._logs = None
         self.username = "root"
         self.pwd = "root"
 
@@ -201,3 +202,15 @@ class MSKMinerWebAPI(BaseWebAPI):
             return response.get("success", False)
         except Exception:
             return False
+
+    async def get_logs(self) -> str | None:
+
+        try:
+            if not self._logs:
+                response = await self.send_get_command("watchdog_log")
+                if response:
+                    self._logs = response.get("text", None)
+                    return self._logs
+                return None
+        except:
+            return None
