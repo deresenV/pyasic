@@ -402,7 +402,7 @@ class AntminerModern(BMMiner):
             except LookupError:
                 pass
 
-        log_errors =  await self._parse_pattern_logs(target_patterns={"asic num error"})
+        log_errors =  await self._parse_pattern_logs(target_patterns={"asic num error", "read temp error!"})
         for error in log_errors:
             chain = error.get("chain", None)
             message = error.get("msg", None)
