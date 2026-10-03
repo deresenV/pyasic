@@ -279,8 +279,9 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
             tune_type = info_app.get("tune_type", {})
             tune_id_start = tune_type.get("tuneHashrateStartProfile", None)
             hashrate_tune_start = tune_type.get("tuneHashrateFrom", None)
+            tune_step = tune_type.get("tuneHashrateStep", 100)
             if tune_id_start and hashrate_tune_start:
-                profile_id = int(tune_id_start) + (int(preset)- int(hashrate_tune_start))//100
+                profile_id = int(tune_id_start) + (int(preset)- int(hashrate_tune_start))//tune_step
                 payload = {
                     "profile_id": profile_id,
                     "profile_type": "hashrate",
