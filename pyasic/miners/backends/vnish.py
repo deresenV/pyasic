@@ -18,6 +18,7 @@ import logging
 
 from pyasic import MinerConfig
 from pyasic.config.mining import MiningModePreset
+from pyasic.data import HashBoard
 from pyasic.data.error_codes import VnishError
 from pyasic.device.algorithm import AlgoHashRateType
 from pyasic.errors import APIError
@@ -459,3 +460,38 @@ class VNish(VNishFirmware, BMMiner):
             return True
         else:
             return False
+
+    async def get_hashboards(self) -> list[HashBoard]:
+        summary = await self.web.summary()
+        result = []
+        chains = summary.get("miner", {}).get("chains", [])
+        if chains:
+            for raw_chain in chains:
+                slot = int(int(raw_chain.get("id", 0)) - 1) # chain vnish numerate 1, 2, 3
+                chip_temp_raw = raw_chain.get("chip_temp", {})
+                chip_temp_min = chip_temp_raw.get("min", 0)
+                chip_temp_max = chip_temp_raw.get("max", 0)
+                chip_temp = sum([i for i in chip_temp_raw.values()]) / len(chip_temp_raw)
+                chips = sum(i for i in raw_chain.get("chip_statuses", {}).values())
+                hashrate = self.algo.hashrate(
+                    rate=raw_chain.get("hashrate_rt", 0),
+                    unit=self.algo.unit.GH,  # type: ignore[attr-defined]
+                ).into(
+                    self.algo.unit.default  # type: ignore[attr-defined]
+                )
+                voltage = raw_chain.get("voltage", None)
+                chain = HashBoard(
+                    slot = slot,
+                    chip_temp = chip_temp,
+                    inlet_temp=chip_temp_min,
+                    outlet_temp=chip_temp_max,
+                    temp = chip_temp,
+                    chips = chips,
+                    expected_chips=self.expected_chips,
+                    hashrate=hashrate,
+                    voltage=voltage,
+                    missing=False,
+                )
+                result.append(chain)
+            return result
+

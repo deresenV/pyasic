@@ -145,44 +145,34 @@ class AntminerModern(BMMiner):
         return logs
 
     async def get_hashboards(self) -> list[HashBoard]:
-        # #rpc
-        # try:
-        #     answer = []
-        #     data = await self.rpc.stats()
-        #     stats_raw = data.get("STATS", [{}, {}])
-        #     stats = stats_raw[1]
-        #     count_boards = int(stats.get("miner_count", 3))
-        #     for i in range(1,count_boards+1):
-        #         try:
-        #             inlet_temp = min(map(int, stats.get(f"temp_pic{i}").split("-")))
-        #             outlet_temp = max(map(int, stats.get(f"temp_pcb{i}").split("-")))
-        #             chip_temp = max(map(int, stats.get(f"temp_chip{i}").split("-")))
-        #             chain = HashBoard(
-        #                 slot=i-1,
-        #                 chips=stats.get(f"chain_acn{i}"),
-        #                 inlet_temp=inlet_temp,
-        #                 outlet_temp=outlet_temp,
-        #                 chip_temp=chip_temp,
-        #                 expected_chips=self.expected_chips,
-        #             )
-        #             answer.append(chain)
-        #         except:
-        #             pass
-        #     return answer
-        # except Exception as e:
-        #     pass
-        # web
         answer = []
         try:
             data = await self.web.send_command('stats')
             chains = data['STATS'][0]['chain']
             for chain in chains:
+                hashrate = self.algo.hashrate(
+                    rate=chain.get("rate_real", 0),
+                    unit=self.algo.unit.GH,  # type: ignore[attr-defined]
+                ).into(
+                    self.algo.unit.default  # type: ignore[attr-defined]
+                )
+                inlet_temp = min(chain.get('temp_pic', 0))
+                outlet_temp = max(chain.get('temp_pcb', 0))
+                chip_temp = max(chain.get('temp_chip', 0))
+                temp = (inlet_temp+outlet_temp+chip_temp) / 3
+                sn = chain.get('sn', "")
+                chips = chain.get('asic_num', 0)
                 answer.append(HashBoard(
-                    slot = chain['index'],
-                    inlet_temp=min(chain['temp_pic']),
-                    outlet_temp=max(chain['temp_pcb']),
-                    chip_temp=max(chain['temp_chip']),
-                    chips=chain['asic_num']
+                    slot = chain.get('index', 0),
+                    inlet_temp=inlet_temp,
+                    outlet_temp=outlet_temp,
+                    chip_temp=chip_temp,
+                    chips=chips,
+                    hashrate=hashrate,
+                    missing=False,
+                    temp = temp,
+                    expected_chips=self.expected_chips,
+                    serial_number=sn
                 ))
 
         except:
