@@ -368,3 +368,8 @@ class MSKMiner(MSKMinerFirmware, BMMiner):
 
         return legacy_errors
 
+    async def is_mining(self) -> bool | None:
+        stopped = await self.web.is_stopped_mining()
+        if stopped:
+            return False
+        return True

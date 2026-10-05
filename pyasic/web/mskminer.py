@@ -214,3 +214,10 @@ class MSKMinerWebAPI(BaseWebAPI):
                 return None
         except:
             return None
+
+    async def is_stopped_mining(self):
+        try:
+            response = await self.send_get_command("miner_stopped")
+            return response.get("stopped", True)
+        except Exception as e:
+            return True
