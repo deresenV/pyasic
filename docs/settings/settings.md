@@ -13,6 +13,10 @@ Settings options:
 - `get_data_retries`
 - `api_function_timeout`
 - `antminer_mining_mode_as_str`
+- `antminer_digest_auth_cache_enabled` (default: `True`; reuse Digest challenge per modern Antminer)
+- `antminer_web_response_cache_enabled` (default: `True`; reuse responses from modern Antminer getters)
+- `web_response_cache_enabled` (default: `True`; reuse responses in other web APIs)
+- `rpc_response_cache_enabled` (default: `True`; reuse responses in RPC APIs)
 - `default_whatsminer_rpc_password`
 - `default_innosilicon_web_password`
 - `default_antminer_web_password`

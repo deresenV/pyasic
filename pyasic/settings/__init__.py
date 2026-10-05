@@ -30,6 +30,10 @@ class Settings(BaseModel):
     get_data_retries: int = Field(default=1)
     api_function_timeout: int = Field(default=5)
     antminer_mining_mode_as_str: bool = Field(default=False)
+    antminer_digest_auth_cache_enabled: bool = Field(default=True)
+    antminer_web_response_cache_enabled: bool = Field(default=True)
+    web_response_cache_enabled: bool = Field(default=True)
+    rpc_response_cache_enabled: bool = Field(default=True)
     default_whatsminer_rpc_password: str = Field(default="admin")
     default_innosilicon_web_password: str = Field(default="admin")
     default_antminer_web_password: str = Field(default="root")
@@ -61,7 +65,7 @@ ssl_cxt = httpx.create_ssl_context()
 # this function returns an AsyncHTTPTransport instance to perform asynchronous HTTP requests
 # using those options.
 def transport(verify: str | bool | SSLContext = ssl_cxt):
-    return AsyncHTTPTransport(verify=verify)
+    return AsyncHTTPTransport(verify=verify, http2=True)
 
 
 def get(key: str, other: Any | None = None) -> Any:

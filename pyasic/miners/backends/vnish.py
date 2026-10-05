@@ -31,6 +31,7 @@ from pyasic.miners.data import (
     WebAPICommand,
 )
 from pyasic.miners.device.firmware import VNishFirmware
+from pyasic.rpc.vnish import VNishRPCAPI
 from pyasic.web.vnish import VNishWebAPI
 
 VNISH_DATA_LOC = DataLocations(
@@ -97,6 +98,9 @@ VNISH_DATA_LOC = DataLocations(
 
 class VNish(VNishFirmware, BMMiner):
     """Handler for VNish miners"""
+
+    _rpc_cls = VNishRPCAPI
+    rpc: VNishRPCAPI
 
     _web_cls = VNishWebAPI
     web: VNishWebAPI
