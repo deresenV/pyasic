@@ -22,3 +22,4 @@ from .cgminer import CGMinerRPCAPI
 from .gcminer import GCMinerRPCAPI
 from .luxminer import LUXMinerRPCAPI
 from .unknown import UnknownRPCAPI
+from .vnish import VNishRPCAPI

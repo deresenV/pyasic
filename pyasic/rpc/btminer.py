@@ -29,6 +29,7 @@ from collections.abc import AsyncGenerator
 from typing import Any, Literal, Optional
 
 import httpx
+from pyasic.misc.response_cache import cached_response
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from passlib.handlers.md5_crypt import md5_crypt
 from pydantic import BaseModel, Field
@@ -1102,9 +1103,10 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
             Summary status of the miner.
         </details>
         """
-        if not self._summary:
-            self._summary = await self.send_command("summary")
-        return self._summary
+        return await cached_response(
+            self, "_summary", "rpc_response_cache_enabled",
+            lambda: self.send_command("summary"),
+        )
 
     async def pools(self) -> dict:
         """Get the pool status from the miner.
@@ -1148,9 +1150,10 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
             Data on all devices with their static details.
         </details>
         """
-        if not self._devdetails:
-            self._devdetails = await self.send_command("devdetails")
-        return self._devdetails
+        return await cached_response(
+            self, "_devdetails", "rpc_response_cache_enabled",
+            lambda: self.send_command("devdetails"),
+        )
 
     async def get_psu(self) -> dict:
         """Get data on the PSU and power information.
@@ -1198,9 +1201,10 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
             BTMiner status and firmware version.
         </details>
         """
-        if not self._status:
-            self._status = await self.send_command("status")
-        return self._status
+        return await cached_response(
+            self, "_status", "rpc_response_cache_enabled",
+            lambda: self.send_command("status"),
+        )
 
     async def get_miner_info(self) -> dict:
         """Get general miner info.
@@ -1211,9 +1215,10 @@ class BTMinerRPCAPI(BaseMinerRPCAPI):
             General miner info.
         </details>
         """
-        if not self._get_miner_info:
-            self._get_miner_info = await self.send_command("get_miner_info", allow_warning=False)
-        return self._get_miner_info
+        return await cached_response(
+            self, "_get_miner_info", "rpc_response_cache_enabled",
+            lambda: self.send_command("get_miner_info", allow_warning=False),
+        )
 
     @api_min_version("2.0.1")
     async def get_error_code(self) -> dict:
@@ -1461,19 +1466,22 @@ If you are sure you want to use this command please use API.send_command("{comma
         return await self.send_command("get.system.setting")
 
     async def get_miner_status_summary(self) -> dict | None:
-        if not self._status_summary:
-            self._status_summary = await self.send_command("get.miner.status", parameters="summary")
-        return self._status_summary
+        return await cached_response(
+            self, "_status_summary", "rpc_response_cache_enabled",
+            lambda: self.send_command("get.miner.status", parameters="summary"),
+        )
 
     async def get_miner_status_edevs(self) -> dict | None:
-        if not self._status_edevs:
-            self._status_edevs = await self.send_command("get.miner.status", parameters="edevs")
-        return self._status_edevs
+        return await cached_response(
+            self, "_status_edevs", "rpc_response_cache_enabled",
+            lambda: self.send_command("get.miner.status", parameters="edevs"),
+        )
 
     async def get_miner_status_pools(self) -> dict | None:
-        if not self._status_pools:
-            self._status_pools = await self.send_command("get.miner.status", parameters="pools")
-        return self._status_pools
+        return await cached_response(
+            self, "_status_pools", "rpc_response_cache_enabled",
+            lambda: self.send_command("get.miner.status", parameters="pools"),
+        )
 
     async def get_miner_history(self) -> dict | None:
         data = await self.send_command(
@@ -1497,14 +1505,16 @@ If you are sure you want to use this command please use API.send_command("{comma
         return await self.send_command("get.psu.command")
 
     async def get_miner_setting(self) -> dict | None:
-        if not self._miner_settings:
-            self._miner_settings = await self.send_command("get.miner.setting")
-        return self._miner_settings
+        return await cached_response(
+            self, "_miner_settings", "rpc_response_cache_enabled",
+            lambda: self.send_command("get.miner.setting"),
+        )
 
     async def get_device_info(self) -> dict | None:
-        if not self._device_info:
-            self._device_info = await self.send_command("get.device.info")
-        return self._device_info
+        return await cached_response(
+            self, "_device_info", "rpc_response_cache_enabled",
+            lambda: self.send_command("get.device.info"),
+        )
 
     async def get_log_download(self) -> dict | None:
         return await self.send_command("get.log.download")

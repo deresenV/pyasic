@@ -600,6 +600,10 @@ class MinerProtocol(Protocol):
                 ) from e
         return miner_data
 
+    async def reset_config(self) -> bool:
+        """Reset miner config to default values."""
+        return False
+
     async def get_data(
         self,
         allow_warning: bool = False,

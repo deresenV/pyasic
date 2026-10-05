@@ -25,6 +25,7 @@ import httpx
 
 from pyasic import settings
 from pyasic.errors import APIError
+from pyasic.web.antminer_6060_transport import tolerate_6060_status_line
 from pyasic.web.base import BaseWebAPI
 
 
@@ -43,6 +44,56 @@ class AntminerModernWebAPI(BaseWebAPI):
         self._get_miner_conf = None
         self.username: str = "root"
         self.pwd: str = settings.get("default_antminer_web_password", "root")
+        self.port_6060: int = 6060
+        self._digest_auth = httpx.DigestAuth(self.username, self.pwd)
+        self._digest_lock = asyncio.Lock()
+
+    async def _request(
+        self,
+        client: httpx.AsyncClient,
+        method: str,
+        url: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Send a request using the configured Digest authentication behavior."""
+        if settings.get("antminer_digest_auth_cache_enabled", True):
+            # Serialize the complete challenge/response exchange so concurrent
+            # commands share the first challenge and do not race on nonce count.
+            async with self._digest_lock:
+                return await client.request(
+                    method, url, auth=self._digest_auth, **kwargs
+                )
+        return await client.request(
+            method, url, auth=httpx.DigestAuth(self.username, self.pwd), **kwargs
+        )
+
+    async def send_6060_command(self, command: str) -> str:
+        """Send a GET command to the miner's auxiliary HTTP API on port 6060."""
+        command = command.lstrip("/")
+        if not command or "/" in command:
+            raise ValueError("Expected a single port 6060 command name")
+
+        url = f"http://{self.ip}:{self.port_6060}/{command}"
+        timeout = settings.get("api_function_timeout", 3)
+        try:
+            async with httpx.AsyncClient(
+                transport=tolerate_6060_status_line(settings.transport())
+            ) as client:
+                if settings.get("antminer_digest_auth_cache_enabled", True):
+                    async with self._digest_lock:
+                        response = await client.get(
+                            url, auth=self._digest_auth, timeout=timeout
+                        )
+                else:
+                    response = await client.get(
+                        url,
+                        auth=httpx.DigestAuth(self.username, self.pwd),
+                        timeout=timeout,
+                    )
+                response.raise_for_status()
+                return response.text
+        except httpx.HTTPError as e:
+            raise APIError(f"Port 6060 command {command!r} failed: {e}") from e
 
     async def send_command(
         self,
@@ -65,18 +116,18 @@ class AntminerModernWebAPI(BaseWebAPI):
             dict: The JSON response from the device or an empty dictionary if an error occurs.
         """
         url = f"http://{self.ip}:{self.port}/cgi-bin/{command}.cgi"
-        auth = httpx.DigestAuth(self.username, self.pwd)
         try:
             async with httpx.AsyncClient(transport=settings.transport()) as client:
                 if parameters:
-                    data = await client.post(
+                    data = await self._request(
+                        client,
+                        "POST",
                         url,
-                        auth=auth,
                         timeout=settings.get("api_function_timeout", 3),
                         json=parameters,
                     )
                 else:
-                    data = await client.get(url, auth=auth)
+                    data = await self._request(client, "GET", url)
         except httpx.HTTPError as e:
             return {"success": False, "message": f"HTTP error occurred: {str(e)}"}
         else:
@@ -126,11 +177,9 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary containing the response of the executed command.
         """
-        auth = httpx.DigestAuth(self.username, self.pwd)
-
         try:
             url = f"http://{self.ip}/cgi-bin/{command}.cgi"
-            ret = await client.get(url, auth=auth)
+            ret = await self._request(client, "GET", url)
         except httpx.HTTPError:
             pass
         else:
@@ -147,13 +196,11 @@ class AntminerModernWebAPI(BaseWebAPI):
         range_size = 3000
 
         url = f"http://{self.ip}:{self.port}/cgi-bin/log.cgi"
-        auth = httpx.DigestAuth(self.username, self.pwd)
-
         headers = {"Range": f"bytes=-{range_size}"}
 
         try:
             async with httpx.AsyncClient(transport=settings.transport()) as client:
-                data = await client.get(url, auth=auth, headers=headers)
+                data = await self._request(client, "GET", url, headers=headers)
                 return data.text
         except Exception:
             return ""
@@ -165,9 +212,20 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary containing the current configuration of the miner.
         """
-        if not self._get_miner_conf:
-            self._get_miner_conf = await self.send_command("get_miner_conf")
-        return self._get_miner_conf
+        return await self._get_cached_command("get_miner_conf", "_get_miner_conf")
+
+    async def _get_cached_command(self, command: str, cache_attr: str) -> dict:
+        if not settings.get("antminer_web_response_cache_enabled", True):
+            return await self.send_command(command)
+
+        cached = getattr(self, cache_attr)
+        if cached is not None:
+            return cached
+
+        result = await self.send_command(command)
+        if result.get("success") is not False:
+            setattr(self, cache_attr, result)
+        return result
 
     async def set_miner_conf(self, conf: dict) -> dict:
         """Set the configuration for the miner.
@@ -207,9 +265,7 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary containing system information of the miner.
         """
-        if not self._get_system_info:
-            self._get_system_info = await self.send_command("get_system_info")
-        return self._get_system_info
+        return await self._get_cached_command("get_system_info", "_get_system_info")
 
     async def get_network_info(self) -> dict:
         """Retrieve network configuration information from the miner.
@@ -217,9 +273,7 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary containing the network configuration of the miner.
         """
-        if not self._get_network_info:
-            self._get_network_info = await self.send_command("get_network_info")
-        return self._get_network_info
+        return await self._get_cached_command("get_network_info", "_get_network_info")
 
     async def summary(self) -> dict:
         """Get a summary of the miner's status and performance.
@@ -227,9 +281,7 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A summary of the miner's current operational status.
         """
-        if not self._summary:
-            self._summary = await self.send_command("summary")
-        return self._summary
+        return await self._get_cached_command("summary", "_summary")
 
     async def get_blink_status(self) -> dict:
         """Check the status of the LED blinking on the miner.
@@ -237,9 +289,7 @@ class AntminerModernWebAPI(BaseWebAPI):
         Returns:
             dict: A dictionary indicating whether the LED is currently blinking.
         """
-        if not self._get_blink_status:
-            self._get_blink_status = await self.send_command("get_blink_status")
-        return self._get_blink_status
+        return await self._get_cached_command("get_blink_status", "_get_blink_status")
 
     async def set_network_conf(
         self,
@@ -270,6 +320,22 @@ class AntminerModernWebAPI(BaseWebAPI):
             return []
         except:
             return []
+
+    async def reset_config(self):
+        try:
+            await self.send_command("reset_conf")
+            return True
+        except:
+            return False
+
+    async def get_wattage(self) -> int | None:
+        response = await self.send_6060_command("miner_power")
+        if response:
+            try:
+                raw_data = response.split(":")
+                return int(raw_data[1])
+            except:
+                return None
 
 class AntminerOldWebAPI(BaseWebAPI):
     def __init__(self, ip: str) -> None:

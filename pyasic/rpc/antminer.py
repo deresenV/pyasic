@@ -1,4 +1,5 @@
 from pyasic.rpc.bmminer import BMMinerRPCAPI
+from pyasic.misc.response_cache import cached_response
 
 
 class AntminerRPCAPI(BMMinerRPCAPI):
@@ -9,12 +10,13 @@ class AntminerRPCAPI(BMMinerRPCAPI):
 
     async def stats(self, new_api: bool = False) -> dict:
         if new_api:
-            if not self._new_stats:
-                self._new_stats = await self.send_command("stats", new_api=True)
-            return self._new_stats
-        if not self._stats:
-            self._stats = await super().stats()
-        return self._stats
+            return await cached_response(
+                self, "_new_stats", "rpc_response_cache_enabled",
+                lambda: self.send_command("stats", new_api=True),
+            )
+        return await cached_response(
+            self, "_stats", "rpc_response_cache_enabled", super().stats
+        )
 
     async def rate(self):
         return await self.send_command("rate", new_api=True)

@@ -15,6 +15,7 @@
 # ------------------------------------------------------------------------------
 from __future__ import annotations
 
+import asyncio
 import json
 import warnings
 from typing import Any
@@ -22,6 +23,7 @@ from typing import Any
 import httpx
 
 from pyasic import settings
+from pyasic.misc.response_cache import cached_response
 from pyasic.errors import APIError
 from pyasic.web.base import BaseWebAPI
 
@@ -35,24 +37,30 @@ class VNishWebAPI(BaseWebAPI):
         self.username = "admin"
         self.pwd = settings.get("default_vnish_web_password", "admin")
         self.token = None
+        self._auth_lock = asyncio.Lock()
 
-    async def auth(self) -> str | None:
-        async with httpx.AsyncClient(transport=settings.transport()) as client:
-            try:
-                auth = await client.post(
-                    f"http://{self.ip}:{self.port}/api/v1/unlock",
-                    json={"pw": self.pwd},
-                )
-            except httpx.HTTPError:
-                warnings.warn(f"Could not authenticate web token with miner: {self}")
-            else:
-                if not auth.status_code == 200:
-                    warnings.warn(
-                        f"Could not authenticate web token with miner: {self}"
+    async def auth(self, *, previous_token: str | None = None) -> str | None:
+        async with self._auth_lock:
+            # Another command may have obtained or refreshed the token while
+            # this one was waiting for the lock.
+            if self.token is not None and self.token != previous_token:
+                return self.token
+            async with httpx.AsyncClient(transport=settings.transport()) as client:
+                try:
+                    auth = await client.post(
+                        f"http://{self.ip}:{self.port}/api/v1/unlock",
+                        json={"pw": self.pwd},
                     )
-                    return None
-                json_auth = auth.json()
-                self.token = json_auth["token"]
+                except httpx.HTTPError:
+                    warnings.warn(f"Could not authenticate web token with miner: {self}")
+                else:
+                    if not auth.status_code == 200:
+                        warnings.warn(
+                            f"Could not authenticate web token with miner: {self}"
+                        )
+                        return None
+                    json_auth = auth.json()
+                    self.token = json_auth["token"]
             return self.token
 
     async def send_command(
@@ -70,11 +78,12 @@ class VNishWebAPI(BaseWebAPI):
             retries = settings.get("get_data_retries", 1)
             for attempt in range(retries):
                 try:
-                    auth = self.token
-                    if auth is None:
+                    request_token = self.token
+                    if request_token is None:
                         raise APIError(
                             f"Could not authenticate web token with miner: {self}"
                         )
+                    auth = request_token
                     if command.startswith("system"):
                         auth = "Bearer " + auth
 
@@ -93,7 +102,7 @@ class VNishWebAPI(BaseWebAPI):
                         )
                     if not response.status_code == 200:
                         # refresh the token, retry
-                        await self.auth()
+                        await self.auth(previous_token=request_token)
                         continue
                     json_data = response.json()
                     if json_data:
@@ -150,14 +159,16 @@ class VNishWebAPI(BaseWebAPI):
         return await self.send_command("info")
 
     async def summary(self) -> dict:
-        if not self._summary:
-            self._summary =  await self.send_command("summary")
-        return self._summary
+        return await cached_response(
+            self, "_summary", "web_response_cache_enabled",
+            lambda: self.send_command("summary"),
+        )
 
     async def perf_summary(self) -> dict:
-        if not self._perf_summary:
-            self._perf_summary =  await self.send_command("perf-summary")
-        return self._perf_summary
+        return await cached_response(
+            self, "_perf_summary", "web_response_cache_enabled",
+            lambda: self.send_command("perf-summary"),
+        )
 
     async def chips(self) -> dict:
         return await self.send_command("chips")
@@ -166,9 +177,10 @@ class VNishWebAPI(BaseWebAPI):
         return await self.send_command("layout")
 
     async def status(self) -> dict:
-        if not self._status:
-            self._status = await self.send_command("status")
-        return self._status
+        return await cached_response(
+            self, "_status", "web_response_cache_enabled",
+            lambda: self.send_command("status"),
+        )
 
     async def settings(self) -> dict:
         return await self.send_command("settings")

@@ -22,6 +22,7 @@ from typing import Any
 import httpx
 
 from pyasic import settings, MinerConfig
+from pyasic.misc.response_cache import cached_response
 from pyasic.errors import APIError
 from pyasic.web.base import BaseWebAPI
 
@@ -100,9 +101,10 @@ class MSKMinerWebAPI(BaseWebAPI):
         return await self.send_command("info_v1")
 
     async def info_app(self) -> dict:
-        if not self._info_app:
-            self._info_app = await self.send_get_command("info_app")
-        return self._info_app
+        return await cached_response(
+            self, "_info_app", "web_response_cache_enabled",
+            lambda: self.send_get_command("info_app"),
+        )
 
     #todo вынести логику в другие общие функции
     async def set_miner_conf(self, config: MinerConfig):
@@ -204,14 +206,14 @@ class MSKMinerWebAPI(BaseWebAPI):
             return False
 
     async def get_logs(self) -> str | None:
-
         try:
-            if not self._logs:
+            async def fetch_logs() -> str | None:
                 response = await self.send_get_command("watchdog_log")
-                if response:
-                    self._logs = response.get("text", None)
-                    return self._logs
-                return None
+                return response.get("text") if response else None
+
+            return await cached_response(
+                self, "_logs", "web_response_cache_enabled", fetch_logs
+            )
         except:
             return None
 

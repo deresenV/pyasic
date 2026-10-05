@@ -281,6 +281,9 @@ class AntminerModern(BMMiner):
         await self.send_config(cfg)
         return True
 
+    async def get_wattage(self) -> int | None:
+        return await self.web.get_wattage()
+
     async def _get_hostname(
         self, web_get_system_info: dict | None = None
     ) -> str | None:
@@ -620,6 +623,9 @@ class AntminerModern(BMMiner):
             except LookupError:
                 pass
         return pools_data
+
+    async def reset_config(self):
+        return await self.web.reset_config()
 
 
 ANTMINER_OLD_DATA_LOC = DataLocations(
