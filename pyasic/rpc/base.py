@@ -21,7 +21,7 @@ import logging
 import re
 import warnings
 
-from pyasic.errors import APIError, APIWarning
+from pyasic.errors import APIError, APINoResponseError, APIWarning
 from pyasic.misc import validate_command_output
 
 
@@ -50,6 +50,7 @@ class BaseMinerRPCAPI:
         parameters: str | int | bool | None = None,
         ignore_errors: bool = False,
         allow_warning: bool = True,
+        response_timeout: float | None = None,
         **kwargs,
     ) -> dict:
         """Send an API command to the miner and return the result.
@@ -59,6 +60,7 @@ class BaseMinerRPCAPI:
             parameters: Any additional parameters to be sent with the command.
             ignore_errors: Whether to raise APIError when the command returns an error.
             allow_warning: Whether to warn if the command fails.
+            response_timeout: Optional transport timeout in seconds, not an API parameter.
 
         Returns:
             The return data from the API command parsed from JSON into a dict.
@@ -75,10 +77,14 @@ class BaseMinerRPCAPI:
             cmd["parameter"] = parameters
 
         # send the command
-        data = await self._send_bytes(json.dumps(cmd).encode("utf-8"))
+        payload = json.dumps(cmd).encode("utf-8")
+        if response_timeout is None:
+            data = await self._send_bytes(payload)
+        else:
+            data = await self._send_bytes(payload, timeout=response_timeout)
 
-        if data is None:
-            raise APIError("No data returned from the API.")
+        if not data:
+            raise APINoResponseError("No data returned from the API.")
 
         if data == b"Socket connect failed: Connection refused\n":
             if not ignore_errors:
@@ -86,6 +92,8 @@ class BaseMinerRPCAPI:
             return {}
 
         api_data = self._load_api_data(data)
+        if not api_data:
+            raise APIError("Empty response from the API.")
 
         # check for if the user wants to allow errors to return
         validation = validate_command_output(api_data)
@@ -199,55 +207,61 @@ If you are sure you want to use this command please use API.send_command("{comma
         data: bytes,
         *,
         port: int | None = None,
-        timeout: int = 100,
+        timeout: float = 100,
     ) -> bytes:
         if port is None:
             port = self.port
         logging.debug(f"{self} - ([Hidden] Send Bytes) - Sending")
         try:
-            # get reader and writer streams
-            reader, writer = await asyncio.open_connection(str(self.ip), port)
-        # handle OSError 121
-        except OSError as e:
-            if e.errno == 121:
-                logging.warning(
-                    f"{self} - ([Hidden] Send Bytes) - Semaphore timeout expired."
-                )
-            return b"{}"
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(str(self.ip), port), timeout=timeout
+            )
+        except (OSError, asyncio.TimeoutError) as e:
+            raise APIError(f"Could not connect to RPC API: {e}") from e
 
-        # send the command
         try:
-            data_task = asyncio.create_task(self._read_bytes(reader, timeout=timeout))
-            logging.debug(f"{self} - ([Hidden] Send Bytes) - Writing")
-            writer.write(data)
-            logging.debug(f"{self} - ([Hidden] Send Bytes) - Draining")
-            await writer.drain()
+            try:
+                writer.write(data)
+                await asyncio.wait_for(writer.drain(), timeout=timeout)
+            except (OSError, asyncio.TimeoutError) as e:
+                raise APIError(f"Could not write to RPC API: {e}") from e
 
-            await data_task
-            ret_data = data_task.result()
-        except TimeoutError:
-            logging.warning(f"{self} - ([Hidden] Send Bytes) - Read timeout expired.")
-            return b"{}"
+            try:
+                return await self._read_bytes(reader, timeout=timeout)
+            except (OSError, asyncio.TimeoutError) as e:
+                raise APINoResponseError("No complete response from RPC API.") from e
+        finally:
+            # Also release the socket on timeout and task cancellation. Do not
+            # let a failed close hide the command result or cancellation.
+            logging.debug(f"{self} - ([Hidden] Send Bytes) - Closing")
+            writer.close()
+            try:
+                await asyncio.wait_for(writer.wait_closed(), timeout=min(timeout, 1))
+            except (OSError, asyncio.TimeoutError):
+                pass
 
-        # close the connection
-        logging.debug(f"{self} - ([Hidden] Send Bytes) - Closing")
-        writer.close()
-        await writer.wait_closed()
-
-        return ret_data
-
-    async def _read_bytes(self, reader: asyncio.StreamReader, timeout: int) -> bytes:
-        ret_data = b""
-
-        # loop to receive all the data
+    async def _read_bytes(self, reader: asyncio.StreamReader, timeout: float) -> bytes:
         logging.debug(f"{self} - ([Hidden] Send Bytes) - Receiving")
-        try:
-            ret_data = await asyncio.wait_for(reader.read(), timeout=timeout)
-        except (asyncio.CancelledError, asyncio.TimeoutError) as e:
-            raise e
-        except Exception as e:
-            logging.warning(f"{self} - ([Hidden] Send Bytes) - API Command Error {e}")
-        return ret_data
+
+        async def read_response() -> bytes:
+            response = bytearray()
+            while True:
+                chunk = await reader.read(8192)
+                if not chunk:
+                    return bytes(response)
+                response.extend(chunk)
+                if b"\x00" in response:
+                    return bytes(response[: response.index(0)])
+                if response.endswith(b"\n"):
+                    # A newline inside pretty-printed JSON is not a terminator.
+                    try:
+                        json.loads(response)
+                    except (ValueError, UnicodeDecodeError):
+                        continue
+                    return bytes(response)
+
+        # One deadline for the entire response, not a fresh timeout per chunk.
+        return await asyncio.wait_for(read_response(), timeout=timeout)
 
     @staticmethod
     def _load_api_data(data: bytes) -> dict:

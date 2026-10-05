@@ -14,6 +14,7 @@
 #  limitations under the License.                                              -
 # ------------------------------------------------------------------------------
 
+from pyasic import settings
 from pyasic.rpc.cgminer import CGMinerRPCAPI
 
 
@@ -25,3 +26,11 @@ class AvalonMinerRPCAPI(CGMinerRPCAPI):
 
     async def litestats(self):
         return await self.send_command("litestats")
+
+    async def softon(self, timestamp: int) -> dict:
+        """Schedule resume; some firmware versions do not acknowledge softon."""
+        return await self.send_command(
+            "ascset",
+            parameters=f"0,softon,1:{timestamp}",
+            response_timeout=settings.get("api_function_timeout", 5),
+        )

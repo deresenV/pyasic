@@ -31,6 +31,10 @@ class APIError(Exception):
             return "Incorrect API parameters."
 
 
+class APINoResponseError(APIError):
+    """A sent RPC command received no complete response; its outcome is unknown."""
+
+
 class PhaseBalancingError(Exception):
     def __init__(self, *args):
         if args:

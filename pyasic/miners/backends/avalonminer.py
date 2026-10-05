@@ -13,13 +13,15 @@
 #  See the License for the specific language governing permissions and         -
 #  limitations under the License.                                              -
 # ------------------------------------------------------------------------------
+import asyncio
 import copy
 import re
 import time
 
+from pyasic import settings
 from pyasic.data import Fan, HashBoard
 from pyasic.device.algorithm import AlgoHashRateType
-from pyasic.errors import APIError
+from pyasic.errors import APIError, APINoResponseError
 from pyasic.miners.backends.cgminer import CGMiner
 from pyasic.miners.data import DataFunction, DataLocations, DataOptions, RPCAPICommand
 from pyasic.rpc.avalonminer import AvalonMinerRPCAPI
@@ -150,15 +152,50 @@ class AvalonMiner(CGMiner):
         return False
 
     async def resume_mining(self) -> bool:
+        """Resume mining, verifying state if the command is not acknowledged.
+
+        False also means that resume could not be confirmed within the timeout;
+        the miner may still be starting. The command is never retried here.
+        """
+        timestamp = int(time.time()) + 5
         try:
-            # Shut off 5 seconds from now
-            timestamp = int(time.time()) + 5
-            data = await self.rpc.ascset(0, "softon", f"1:{timestamp}")
+            data = await self.rpc.softon(timestamp)
+        except APINoResponseError:
+            # A fresh query before the scheduled time could still see soft-off.
+            await asyncio.sleep(max(0, timestamp - time.time()))
+            try:
+                return (
+                    await asyncio.wait_for(
+                        self.is_mining(),
+                        timeout=settings.get("api_function_timeout", 5),
+                    )
+                    is True
+                )
+            except (APIError, asyncio.TimeoutError):
+                return False
         except APIError:
             return False
-        if "success" in data["STATUS"][0]["Msg"]:
-            return True
-        return False
+
+        try:
+            status = data["STATUS"][0]
+            return status["STATUS"] == "S" and (
+                status["Msg"] == "ASC 0 set OK" or "success" in status["Msg"].lower()
+            )
+        except (KeyError, IndexError, TypeError, AttributeError):
+            return False
+
+    async def _is_mining(self) -> bool | None:
+        try:
+            data = self.parse_estats(await self.rpc.estats())
+            state = data["STATS"][0]["MM ID0"]
+            if state.get("SoftOFF") == 1:
+                return False
+            work = re.search(r"Work:\s*([^,]+)", state.get("SYSTEMSTATU", ""))
+            if work is not None:
+                return work.group(1).strip() == "In Work"
+        except (APIError, KeyError, IndexError, TypeError, ValueError, AttributeError):
+            pass
+        return None
 
     @staticmethod
     def parse_estats(data):
